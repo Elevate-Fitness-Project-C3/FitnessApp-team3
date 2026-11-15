@@ -1,6 +1,21 @@
 services:
-  fitnessprofileservice:
-    image: ${DOCKER_REGISTRY-}fitnessprofileservice
+  nutritionservice:
+    image: ${DOCKER_REGISTRY-}nutritionservice
     build:
       context: .
-      dockerfile: FitnessProfileService/Dockerfile
+      dockerfile: NutritionService/Dockerfile
+    restart: on-failure
+    depends_on:
+      - nutrition-db
+
+  nutrition-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: nutrition-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD}"
+    volumes:
+      - nutrition_db_data:/var/opt/mssql
+
+volumes:
+  nutrition_db_data:
