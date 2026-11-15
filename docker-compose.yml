@@ -1,6 +1,126 @@
+x-api: &api
+  environment: &api-environment
+    ASPNETCORE_HTTP_PORTS: "8080"
+  depends_on:
+    database-init:
+      condition: service_completed_successfully
+
 services:
+  identityservice:
+    <<: *api
+    image: ${DOCKER_REGISTRY-}identityservice
+    build:
+      context: .
+      dockerfile: IdentityService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessIdentity;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+
   fitnessprofileservice:
+    <<: *api
     image: ${DOCKER_REGISTRY-}fitnessprofileservice
     build:
       context: .
       dockerfile: FitnessProfileService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessProfile;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+
+  trainingservice:
+    <<: *api
+    image: ${DOCKER_REGISTRY-}trainingservice
+    build:
+      context: .
+      dockerfile: TrainingService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessTraining;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-fitness}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    depends_on: &event-dependencies
+      database-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+
+  progressservice:
+    <<: *api
+    image: ${DOCKER_REGISTRY-}progressservice
+    build:
+      context: .
+      dockerfile: ProgressService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessProgress;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-fitness}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    depends_on: *event-dependencies
+
+  nutritionservice:
+    <<: *api
+    image: ${DOCKER_REGISTRY-}nutritionservice
+    build:
+      context: .
+      dockerfile: NutritionService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessNutrition;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+
+  paymentservice:
+    <<: *api
+    profiles: [payment]
+    image: ${DOCKER_REGISTRY-}paymentservice
+    build:
+      context: .
+      dockerfile: PaymentService/Dockerfile
+    environment:
+      <<: *api-environment
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessPayment;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+
+  sqlserver:
+    image: &sqlserver-image mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  database-init:
+    image: *sqlserver-image
+    environment:
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    entrypoint: ["/opt/mssql-tools18/bin/sqlcmd"]
+    command: ["-S", "sqlserver", "-U", "sa", "-C", "-b", "-i", "/scripts/create-databases.sql"]
+    volumes:
+      - ./docker/sqlserver/create-databases.sql:/scripts/create-databases.sql:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-fitness}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
