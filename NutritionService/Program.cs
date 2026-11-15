@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NutritionService;
 using NutritionService.Data;
+using NutritionService.EndPoints;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -22,6 +23,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseHttpsRedirection();
+app.MapNutritionPreferenceEndpoints();
 app.Run();
 
 
