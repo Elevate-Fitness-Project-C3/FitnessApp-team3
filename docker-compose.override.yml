@@ -1,12 +1,43 @@
-services:
-  nutritionservice:
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Server=nutrition-db;Database=NutritionDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
-    ports:
-      - "${NUTRITION_PORT}:8080"
+x-development: &development
+  environment:
+    ASPNETCORE_ENVIRONMENT: Development
 
-  nutrition-db:
+services:
+  identityservice:
+    <<: *development
     ports:
-      - "${NUTRITION_DB_PORT}:1433"
+      - "127.0.0.1:5002:8080"
+
+  fitnessprofileservice:
+    <<: *development
+    ports:
+      - "127.0.0.1:5007:8080"
+
+  trainingservice:
+    <<: *development
+    ports:
+      - "127.0.0.1:5296:8080"
+
+  progressservice:
+    <<: *development
+    ports:
+      - "127.0.0.1:5043:8080"
+
+  nutritionservice:
+    <<: *development
+    ports:
+      - "127.0.0.1:5041:8080"
+
+  paymentservice:
+    <<: *development
+    ports:
+      - "127.0.0.1:5035:8080"
+
+  sqlserver:
+    ports:
+      - "127.0.0.1:1433:1433"
+
+  rabbitmq:
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
