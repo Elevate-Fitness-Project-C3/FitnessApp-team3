@@ -15,12 +15,8 @@ docker compose up --build -d
 docker compose ps -a
 ```
 
-The default stack starts the five core APIs, SQL Server, RabbitMQ, and a one-time
-database initializer. Payment is optional:
-
-```powershell
-docker compose --profile payment up --build -d
-```
+The default stack starts all six APIs, including Payment, SQL Server, RabbitMQ,
+and a one-time database initializer.
 
 | Service | Local address | Database |
 | --- | --- | --- |
@@ -29,13 +25,14 @@ docker compose --profile payment up --build -d
 | Training | http://localhost:5296 | FitnessTraining |
 | Progress | http://localhost:5043 | FitnessProgress |
 | Nutrition | http://localhost:5041 | FitnessNutrition |
-| Payment (optional) | http://localhost:5035 | FitnessPayment |
+| Payment | http://localhost:5035 | FitnessPayment |
 | SQL Server | localhost,1433 | Login: sa; password from .env |
 | RabbitMQ AMQP | localhost:5672 | Credentials from .env |
 | RabbitMQ management | http://localhost:15672 | Credentials from .env |
 
 `docker-compose.override.yml` is loaded automatically for local development. It
-enables Development and publishes ports only on localhost. Container traffic uses
+contains all service environment settings, enables Development, and publishes
+ports only on localhost. Container traffic uses
 HTTP on port 8080, so no local HTTPS certificate mounts are needed. Identity
 Swagger UI is at http://localhost:5002/swagger. The other API scaffolds currently
 expose `/openapi/v1.json` and `/weatherforecast`.
@@ -49,14 +46,17 @@ Host ports in the table are for tools running outside Docker.
 Each API receives `ConnectionStrings__DefaultConnection` pointing to its own
 database on the local SQL Server instance. The initializer waits for SQL Server
 to become healthy and creates missing databases without dropping existing data.
-It also prepares the optional Payment database. APIs wait for initialization to
+It also prepares the Payment database. APIs wait for initialization to
 finish; Training and Progress additionally wait for RabbitMQ readiness.
 
 Training and Progress receive `RabbitMq__Host`, `RabbitMq__Username`, and
 `RabbitMq__Password` for the completed-workout event flow. These are configuration
-keys for the future application integrations: the current scaffolds do not yet
-register a SQL Server EF provider, run schema migrations, or publish/consume events.
-Database creation alone does not create application tables.
+keys for the future messaging integrations; the scaffolds do not yet
+publish/consume events. Identity registers the SQL Server EF provider and includes
+an initial migration for users, OTP codes, and refresh tokens. Apply that migration
+as described in [IdentityService/README.md](IdentityService/README.md). Other APIs
+still have no schema migrations. The database initializer creates databases only;
+starting the stack does not apply application migrations.
 
 SQL Server and RabbitMQ data use named volumes and survive `docker compose down`.
 The local stack uses the SQL Server `sa` account; use restricted service accounts
@@ -69,19 +69,14 @@ does not rotate credentials already stored in existing data volumes.
 docker compose config --quiet
 docker compose logs -f identityservice
 docker compose logs database-init
-docker compose --profile payment down
+docker compose down
 ```
 
-The last command stops both core and optional services and preserves stored data.
+The last command stops all services and preserves stored data.
 In Visual Studio, copy/edit `.env` first, then select Docker Compose as the startup
-project. The five core APIs are configured for debugging.
+project. All six APIs are configured for debugging, including Payment.
 
-The base Compose file keeps infrastructure ports private and uses the .NET
-Production default. To use it without the development override:
-
-```powershell
-docker compose -f docker-compose.yml up --build -d
-```
-
-This base configuration is a starting point; a deployment still needs its own
-ingress/TLS configuration and credentials.
+The base Compose file defines builds, dependencies, storage, and health checks.
+Running with only `docker-compose.yml` excludes all service environment settings
+and published ports. A deployment must supply its own override with the required
+environment settings and credentials, plus ingress/TLS configuration.
