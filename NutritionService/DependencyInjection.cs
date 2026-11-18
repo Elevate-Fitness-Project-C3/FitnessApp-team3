@@ -1,8 +1,14 @@
 ﻿using FluentValidation;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NutritionService.Comman.Behaviors;
 using NutritionService.Data;
 using NutritionService.Domain.Repositories;
+using NutritionService.Features.CalorieTarget.DTOs;
+using NutritionService.Features.CalorieTarget.Handlers;
+using NutritionService.Features.CalorieTarget.Queries;
+using NutritionService.Options;
+using NutritionService.Services.FitnessProfile;
 using System.Reflection;
 
 namespace NutritionService
@@ -13,7 +19,8 @@ namespace NutritionService
         {
             service.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             service.AddDbContext<NutritionDbContext>(opt =>
-            opt.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+                opt.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+
             var assembly = Assembly.GetExecutingAssembly();
             service.AddMediatR(cfg =>
             {
@@ -21,6 +28,24 @@ namespace NutritionService
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
             });
             service.AddValidatorsFromAssembly(assembly);
+
+            //================================================================
+            service.Configure<CalorieTargetOptions>(config.GetSection("CalorieTarget"));
+
+            service.AddHttpContextAccessor();
+            service.AddTransient<BearerTokenForwardingHandler>();
+            service.AddTransient<FakeFitnessProfileHttpHandler>();
+
+            service.AddHttpClient<IRequestHandler<GetUserTdeeQuery, FitnessProfileTdeeDto>, GetUserTdeeQueryHandler>(client =>
+            {
+                var baseUrl = config["Services:FitnessProfileBaseUrl"]
+                  ?? "http://localhost:5007";
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(5);
+            })
+            .AddHttpMessageHandler<BearerTokenForwardingHandler>()
+            .AddHttpMessageHandler<FakeFitnessProfileHttpHandler>();
+
             return service;
         }
     }

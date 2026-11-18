@@ -24,6 +24,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseHttpsRedirection();
 app.MapNutritionPreferenceEndpoints();
+app.MapCalorieTargetEndpoints();
 app.Run();
 
 
