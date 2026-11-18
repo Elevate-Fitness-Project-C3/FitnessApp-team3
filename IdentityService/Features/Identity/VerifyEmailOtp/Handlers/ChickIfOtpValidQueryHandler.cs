@@ -15,31 +15,26 @@ namespace IdentityService.Features.Identity.VerifyEmailOtp.Handlers
         IUnitOfWork unitOfWork,
         IOtpService otpService,
         IOptions<OtpSettings> options,
-        TimeProvider timeProvider) : IRequestHandler<ChickIfOtpValidQuery, bool>
+        TimeProvider timeProvider) : IRequestHandler<ChickIfOtpValidQuery, EmailOtpValidationResult>
     {
-        public async Task<bool> Handle(ChickIfOtpValidQuery request, CancellationToken cancellationToken)
+        public async Task<EmailOtpValidationResult> Handle(ChickIfOtpValidQuery request, CancellationToken cancellationToken)
         {
             var now = timeProvider.GetUtcNow();
             var challenge = await unitOfWork.GetRepository<OtpCode>().GetAll()
+                .AsNoTracking()
                 .Where(otp => otp.UserId == request.UserId && otp.Purpose == OtpCode.EmailVerificationPurpose)
                 .OrderByDescending(otp => otp.Id)
                 .Take(1)
                 .FirstOrDefaultAsync(otp => otp.ExpiresAt > now, cancellationToken);
             if (challenge is null || challenge.IsUsed
                 || challenge.FailedAttempts >= options.Value.MaxFailedAttempts)
-                return false;
+                return default;
 
             var isValidOtp = CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(challenge.CodeHash),
                 Encoding.UTF8.GetBytes(otpService.HashCode(request.Otp)));
 
-            // The verify orchestrator commits this change with account activation.
-            if (isValidOtp)
-                challenge.IsUsed = true;
-            else
-                challenge.FailedAttempts++;
-
-            return isValidOtp;
+            return new EmailOtpValidationResult(isValidOtp, isValidOtp ? null : challenge.Id);
         }
     }
 }

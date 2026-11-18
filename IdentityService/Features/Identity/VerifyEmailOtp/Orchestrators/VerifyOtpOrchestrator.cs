@@ -25,8 +25,17 @@ namespace IdentityService.Features.Identity.VerifyEmailOtp.Orchestrators
                 if (!await sender.Send(new BeginEmailOtpUpdateCommand(userId.Value), cancellationToken))
                     return;
 
-                var isValidOtp = await sender.Send(new ChickIfOtpValidQuery(userId.Value, request.Otp), cancellationToken);
-                if (!isValidOtp)
+                var validation = await sender.Send(new ChickIfOtpValidQuery(userId.Value, request.Otp), cancellationToken);
+                if (!validation.IsValid)
+                {
+                    if (validation.FailedOtpId is int failedOtpId)
+                        await sender.Send(new RecordFailedEmailOtpAttemptCommand(userId.Value, failedOtpId), cancellationToken);
+
+                    return;
+                }
+
+                var isMarkedAsUsed = await sender.Send(new MarkOtpAsUsedCommand(userId.Value, request.Otp), cancellationToken);
+                if (!isMarkedAsUsed)
                     return;
 
                 if (!await sender.Send(new ActivateUserCommend(userId.Value), cancellationToken))
