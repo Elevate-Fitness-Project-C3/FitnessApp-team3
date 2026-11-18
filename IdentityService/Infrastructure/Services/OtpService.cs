@@ -16,35 +16,16 @@ public class OtpService(IOptions<OtpSettings> options) : IOtpService
         return RandomNumberGenerator.GetInt32(maximum).ToString($"D{length}", CultureInfo.InvariantCulture);
     }
 
-    public string HashCode(Guid challengeId, string purpose, string code)
+    public string HashCode(string code)
     {
         var key = Convert.FromBase64String(options.Value.ProtectionKey);
         try
         {
-            var payload = Encoding.UTF8.GetBytes($"FitnessApp|{purpose.Length}:{purpose}|{challengeId:N}|{code}");
-            return Convert.ToHexString(HMACSHA256.HashData(key, payload));
+            return Convert.ToHexString(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(code)));
         }
         finally
         {
             CryptographicOperations.ZeroMemory(key);
-        }
-    }
-
-    public bool VerifyCode(Guid challengeId, string purpose, string code, string codeHash)
-    {
-        if (code.Length != options.Value.Length || code.Any(character => character is < '0' or > '9'))
-            return false;
-
-        try
-        {
-            var expected = Convert.FromHexString(codeHash);
-            var actual = Convert.FromHexString(HashCode(challengeId, purpose, code));
-            return expected.Length == actual.Length
-                && CryptographicOperations.FixedTimeEquals(expected, actual);
-        }
-        catch (FormatException)
-        {
-            return false;
         }
     }
 }

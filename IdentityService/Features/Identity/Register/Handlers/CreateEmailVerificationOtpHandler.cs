@@ -26,15 +26,14 @@ public class CreateEmailVerificationOtpHandler(
             var challenge = new OtpCode
             {
                 ChallengeId = Guid.NewGuid(),
-                User = command.User,
-                CodeHash = string.Empty,
+                UserId = command.UserId,
+                CodeHash = otpService.HashCode(code),
                 Purpose = OtpCode.EmailVerificationPurpose,
                 CreatedAt = now,
                 ExpiresAt = now.AddMinutes(options.Value.ExpirationMinutes),
                 IsUsed = false,
                 FailedAttempts = 0
             };
-            challenge.CodeHash = otpService.HashCode(challenge.ChallengeId, challenge.Purpose, code);
             unitOfWork.GetRepository<OtpCode>().Add(challenge);
             verification = new GeneratedEmailVerificationOtp(challenge, code);
             return Task.CompletedTask;

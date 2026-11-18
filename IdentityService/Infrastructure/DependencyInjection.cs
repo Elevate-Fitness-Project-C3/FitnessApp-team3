@@ -5,6 +5,8 @@ using IdentityService.Domain.Services;
 using IdentityService.Features.Identity.Register.Commands;
 using IdentityService.Features.Identity.Register.Orchestrators;
 using IdentityService.Features.Identity.Register.Validators;
+using IdentityService.Features.Identity.VerifyEmailOtp.Validators;
+using IdentityService.Features.Identity.VerifyEmailOtp.ViewModels;
 using IdentityService.Infrastructure.Persistence;
 using IdentityService.Infrastructure.Repositories;
 using IdentityService.Infrastructure.Services;
@@ -36,6 +38,8 @@ public static class DependencyInjection
         services.AddTransient<ISmtpClient, SmtpClient>();
         services.AddScoped<IEmailSender, MailKitEmailSender>();
         services.AddScoped<IValidator<RegisterUserCommand>, RegisterUserCommandValidator>();
+        services.AddScoped<IValidator<VerifyEmailOtpVM>, VerifyEmailOtpVMValidator>();
+        services.AddScoped<IValidator<ResendEmailVerifycationOtpVM>, ResendEmailVerifycationOtpVMValidator>();
         services.AddMediatR(configuration =>
             configuration.RegisterServicesFromAssemblyContaining<RegisterUserOrchestrator>());
         return services;

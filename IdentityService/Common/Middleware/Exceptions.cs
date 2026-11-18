@@ -6,7 +6,7 @@ public class NotFoundException(string message) : Exception(message);
 public class ConflictException(string message) : Exception(message);
 public class GoneException(string message) : Exception(message);
 
-public class EmailDeliveryException(EmailDeliveryStatus status) : Exception(
+public class EmailDeliveryException(EmailDeliveryStatus status, string? message = null) : Exception(message ??
     "Your account was created, but verification email delivery could not be confirmed. "
     + "If the email arrives, its code remains valid until it expires. Otherwise, request another verification code.")
 {

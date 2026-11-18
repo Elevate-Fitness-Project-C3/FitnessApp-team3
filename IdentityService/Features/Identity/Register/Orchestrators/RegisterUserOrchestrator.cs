@@ -24,9 +24,8 @@ public class RegisterUserOrchestrator(
         RegisterUserCommand command, CancellationToken cancellationToken)
     {
         await validator.ValidateAndThrowAsync(command, cancellationToken);
-
-        var normalizedEmail = EmailNormalizer.Normalize(command.Email);
-        if (await sender.Send(new EmailExistsQuery(normalizedEmail), cancellationToken))
+        var existingUserId = await sender.Send(new GetUserIdByEmailQuery(command.Email), cancellationToken);
+        if (existingUserId != null)
             throw new ConflictException(DuplicateEmailMessage);
 
         GeneratedEmailVerificationOtp verification = null!;
@@ -34,10 +33,9 @@ public class RegisterUserOrchestrator(
         {
             await unitOfWork.ExecuteAsync(async () =>
             {
-                var user = await sender.Send(
-                    new CreateUserCommand(command.Name, command.Email, command.Password), cancellationToken);
-                verification = await sender.Send(
-                    new CreateEmailVerificationOtpCommand(user), cancellationToken);
+                var user = await sender.Send(new CreateUserCommand(command.Name, command.Email, command.Password), cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                verification = await sender.Send(new CreateEmailVerificationOtpCommand(user.Id), cancellationToken);
             }, cancellationToken);
         }
         catch (DbUpdateException exception) when (SqlServerExceptionHelper.IsNormalizedEmailConflict(exception))
