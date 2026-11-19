@@ -1,0 +1,10 @@
+﻿namespace FitnessProfileService.Common.Enums
+{
+    public enum TrainingExperienceLevel
+    {
+        Beginner = 1,
+        Intermediate = 2,
+        Advanced = 3,
+        Expert = 4
+    }
+}
