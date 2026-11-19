@@ -1,6 +1,31 @@
-@IdentityService_HostAddress = http://localhost:5002
+@IdentityService_HostAddress = https://localhost:7220
 
-GET {{IdentityService_HostAddress}}/weatherforecast/
-Accept: application/json
+### Register; use an address you control for an actual email.
+POST {{IdentityService_HostAddress}}/api/identity/register
+Content-Type: application/json
 
-###
+{
+  "name": "Example User",
+  "email": "new.user@example.com",
+  "password": "Example-only long password 42!"
+}
+
+### Duplicate email, including different casing: 409
+POST {{IdentityService_HostAddress}}/api/identity/register
+Content-Type: application/json
+
+{
+  "name": "Example User",
+  "email": "NEW.USER@example.com",
+  "password": "Example-only long password 42!"
+}
+
+### Invalid inputs: 400
+POST {{IdentityService_HostAddress}}/api/identity/register
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "password": ""
+}
