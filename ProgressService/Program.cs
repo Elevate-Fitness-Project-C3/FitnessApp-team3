@@ -1,8 +1,42 @@
+using MassTransit;
+using Microsoft.EntityFrameworkCore;
+using ProgressService.Feature.CompletedWorkout.Consumers;
+using ProgressService.Infrastructure.Persistence;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+
+builder.Services.AddDbContext<ProgressDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddMediatR(config =>
+    config.RegisterServicesFromAssemblyContaining<WorkoutCompletedConsumer>());
+
+builder.Services.AddMassTransit(config => {
+    config.AddConsumer<WorkoutCompletedConsumer>();
+
+    config.AddEntityFrameworkOutbox<ProgressDbContext>(o =>
+    {
+        o.UseSqlServer();
+        // No Bus
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
+    });
+
+    // Configure RabbitMQ here
+    config.UsingRabbitMq((context, cfg) => {
+        cfg.Host(builder.Configuration["RabbitMq:Host"], builder.Configuration["RabbitMq:VirtualHost"], h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"]!);
+            h.Password(builder.Configuration["RabbitMq:Password"]!);
+        });
+
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 
