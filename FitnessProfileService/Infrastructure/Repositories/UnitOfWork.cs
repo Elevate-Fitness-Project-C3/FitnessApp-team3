@@ -86,6 +86,14 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
             throw new NotSupportedException("The database provider does not support savepoints.");
         return transaction;
     }
+    public Task<int> SaveChangesAsync(
+    CancellationToken cancellationToken = default)
+    {
+        if (_transaction is null)
+            throw new InvalidOperationException(
+                "SaveChangesAsync requires an active unit of work.");
 
+        return context.SaveChangesAsync(cancellationToken);
+    }
     public void Dispose() => _transaction?.Dispose();
 }

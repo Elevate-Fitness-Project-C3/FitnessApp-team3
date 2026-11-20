@@ -1,6 +1,11 @@
+
 using FitnessProfileService.Common.Middleware;
+using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Endpoints;
+using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Handlers;
+using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Orchestrators;
 using FitnessProfileService.Infrastructure;
 using FitnessProfileService.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +14,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
+
+// Register MediatR and scan handlers in the Onboarding assembly
+builder.Services.AddMediatR(
+    typeof(CompleteOnboardingOrchestratorHandler).Assembly);
+
+
+
 
 builder.Services.AddIdentityPersistence(options =>
 {
@@ -31,7 +43,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers();
+// Map Minimal API Endpoints
+app.MapCompleteOnboardingEndpoint();
 
 // 4. Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())

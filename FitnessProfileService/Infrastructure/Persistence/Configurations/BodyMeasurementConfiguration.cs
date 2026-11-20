@@ -4,14 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FitnessProfileService.Infrastructure.Persistence.Configurations
 {
-    public class BodyMeasurementConfiguration
-        : IEntityTypeConfiguration<BodyMeasurement>
+    public class BodyMeasurementConfiguration : IEntityTypeConfiguration<BodyMeasurement>
     {
         public void Configure(EntityTypeBuilder<BodyMeasurement> builder)
         {
             builder.ToTable("BodyMeasurements");
 
-            builder.HasKey(x => x.MeasurementId);
+            builder.HasKey(x => x.Id);
 
             builder.Property(x => x.HeightCm)
                 .HasPrecision(5, 2)

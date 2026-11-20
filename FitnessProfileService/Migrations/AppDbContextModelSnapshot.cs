@@ -24,7 +24,7 @@ namespace FitnessProfileService.Migrations
 
             modelBuilder.Entity("FitnessProfileService.Domain.Entities.BodyMeasurement", b =>
                 {
-                    b.Property<Guid>("MeasurementId")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
@@ -42,7 +42,7 @@ namespace FitnessProfileService.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.HasKey("MeasurementId");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId", "RecordedAt");
 
@@ -51,11 +51,11 @@ namespace FitnessProfileService.Migrations
 
             modelBuilder.Entity("FitnessProfileService.Domain.Entities.FitnessProfile", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AvailableDaysPerWeek")
+                    b.Property<int?>("AvailableDaysPerWeek")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -80,13 +80,18 @@ namespace FitnessProfileService.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TrainingExperienceLevel")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("UserId");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("FitnessProfiles", (string)null);
                 });
@@ -96,6 +101,7 @@ namespace FitnessProfileService.Migrations
                     b.HasOne("FitnessProfileService.Domain.Entities.FitnessProfile", "FitnessProfile")
                         .WithMany("BodyMeasurements")
                         .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

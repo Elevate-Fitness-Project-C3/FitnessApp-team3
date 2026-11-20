@@ -1,6 +1,7 @@
-namespace FitnessProfileService.Domain.Common;
-
-public abstract class BaseEntity
+﻿namespace FitnessProfileService.Domain.Common
 {
-    public int Id { get; set; }
+    public class BaseEntity
+    {
+        public Guid Id{ get; set; }
+    }
 }
