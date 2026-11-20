@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NutritionService.Data;
 
 namespace NutritionService.Domain.Repositories
@@ -23,36 +22,75 @@ namespace NutritionService.Domain.Repositories
         public async Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _context.Set<T>().FindAsync(new object[] { id }, ct);
 
-        public async Task<int> SaveChangesAsync(CancellationToken ct = default)
-         => await _context.SaveChangesAsync(ct);
         public void SaveInclude(T entity, params string[] properties)
         {
-            var keyName = _context.Model
-                .FindEntityType(typeof(T))!
-                .FindPrimaryKey()!
-                .Properties[0].Name;
+            ArgumentNullException.ThrowIfNull(entity);
+            ArgumentNullException.ThrowIfNull(properties);
 
-            var keyProp = typeof(T).GetProperty(keyName)!;
-            var entityId = keyProp.GetValue(entity);
+            if (properties.Length == 0)
+                throw new ArgumentException(
+                    "At least one property is required.",
+                    nameof(properties));
 
-            var local = _context.Set<T>().Local
-                .FirstOrDefault(e =>
-                    keyProp.GetValue(e)!.Equals(entityId));
+            var entityType = _context.Model
+                .FindEntityType(typeof(T))
+                ?? throw new InvalidOperationException(
+                    $"Entity '{typeof(T).Name}' not in model.");
 
-            EntityEntry entry = local is null
-                ? _context.Entry(entity)
-                : _context.ChangeTracker.Entries<T>()
-                    .First(e => keyProp
-                        .GetValue(e.Entity)!
-                        .Equals(entityId));
+            var pk = entityType.FindPrimaryKey()
+                ?? throw new InvalidOperationException(
+                    $"Entity '{typeof(T).Name}' has no key.");
+
+            var keyValues = pk.Properties
+                .Select(p => p.GetGetter().GetClrValue(entity))
+                .ToArray();
+
+            var localEntry = _context.ChangeTracker
+                .Entries<T>()
+                .FirstOrDefault(e => pk.Properties
+                    .Select(p => e.Property(p.Name).CurrentValue)
+                    .SequenceEqual(keyValues));
+
+            var entry = localEntry ?? _context.Entry(entity);
+
+            if (!entry.IsKeySet
+                || entry.State == EntityState.Added
+                || entry.State == EntityState.Deleted)
+            {
+                throw new InvalidOperationException(
+                    "Partial updates require an existing entity.");
+            }
+
+            var selected = properties
+                .Distinct()
+                .Select(name =>
+                {
+                    var prop = entityType.FindProperty(name)
+                        ?? throw new ArgumentException(
+                            $"Unknown property '{name}'.",
+                            nameof(properties));
+
+                    if (prop.IsPrimaryKey())
+                        throw new ArgumentException(
+                            "Primary keys cannot be updated.",
+                            nameof(properties));
+
+                    var val = prop.GetGetter().GetClrValue(entity);
+                    return (Name: name, Value: val);
+                })
+                .ToArray();
+
+            if (entry.State == EntityState.Detached)
+                _context.Set<T>().Attach(entry.Entity);
 
             foreach (var prop in entry.Properties)
-            {
-                if (prop.Metadata.IsPrimaryKey())
-                    continue;
+                prop.IsModified = false;
 
-                prop.IsModified = properties
-                    .Contains(prop.Metadata.Name);
+            foreach (var item in selected)
+            {
+                var propEntry = entry.Property(item.Name);
+                propEntry.CurrentValue = item.Value;
+                propEntry.IsModified = true;
             }
         }
     }

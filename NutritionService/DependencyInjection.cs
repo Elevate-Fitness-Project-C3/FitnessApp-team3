@@ -10,7 +10,6 @@ using NutritionService.Features.CalorieTarget.Queries;
 using NutritionService.Options;
 using NutritionService.Services.FitnessProfile;
 using System.Reflection;
-
 namespace NutritionService
 {
     public static class DependencyInjection
@@ -30,11 +29,10 @@ namespace NutritionService
             service.AddValidatorsFromAssembly(assembly);
 
             //================================================================
-            service.Configure<CalorieTargetOptions>(config.GetSection("CalorieTarget"));
-
+            service.Configure<CalorieTargetOptions>(config.GetSection(CalorieTargetOptions.SectionName));
             service.AddHttpContextAccessor();
             service.AddTransient<BearerTokenForwardingHandler>();
-            service.AddTransient<FakeFitnessProfileHttpHandler>();
+            service.AddScoped<IUnitOfWork, UnitOfWork>();
 
             service.AddHttpClient<IRequestHandler<GetUserTdeeQuery, FitnessProfileTdeeDto>, GetUserTdeeQueryHandler>(client =>
             {
@@ -43,8 +41,7 @@ namespace NutritionService
                 client.BaseAddress = new Uri(baseUrl);
                 client.Timeout = TimeSpan.FromSeconds(5);
             })
-            .AddHttpMessageHandler<BearerTokenForwardingHandler>()
-            .AddHttpMessageHandler<FakeFitnessProfileHttpHandler>();
+            .AddHttpMessageHandler<BearerTokenForwardingHandler>();
 
             return service;
         }

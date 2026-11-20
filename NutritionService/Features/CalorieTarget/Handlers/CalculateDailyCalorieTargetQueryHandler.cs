@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Options;
 using NutritionService.Domain.Enums;
 using NutritionService.Features.CalorieTarget.DTOs;
 using NutritionService.Features.CalorieTarget.Queries;
@@ -8,15 +9,21 @@ namespace NutritionService.Features.CalorieTarget.Handlers
 {
     public class CalculateDailyCalorieTargetQueryHandler : IRequestHandler<CalculateDailyCalorieTargetQuery, DailyCalorieTargetDto>
     {
-        private static readonly CalorieTargetOptions _options = new();
+        private readonly CalorieTargetOptions _options;
+        public CalculateDailyCalorieTargetQueryHandler(IOptions<CalorieTargetOptions> options)
+            => _options = options.Value;
+        //private static readonly CalorieTargetOptions _options = new();
+
         public Task<DailyCalorieTargetDto> Handle(CalculateDailyCalorieTargetQuery request, CancellationToken ct)
         {
             var tdee = request.TdeeData.Tdee!.Value;
             var goal = request.Goal;
             var plannedAdjustment = goal switch
             {
-                NutritionGoal.LoseWeight => _options.GradualLossDeficit,
-                NutritionGoal.GainMuscle => _options.GradualGainSurplus,
+                NutritionGoal.LoseWeight =>
+                Math.Abs(_options.GradualLossDeficit),
+                NutritionGoal.GainMuscle =>
+                Math.Abs(_options.GradualGainSurplus),
                 NutritionGoal.MaintainWeight => 0m,
                 _ => 0m
             };
@@ -28,14 +35,14 @@ namespace NutritionService.Features.CalorieTarget.Handlers
                  (DateTime.UtcNow - request.TdeeData.CalculatedAt.Value).TotalDays > _options.MaxTdeeAgeDays;
 
             var dto = new DailyCalorieTargetDto(
-            DailyCalorieTarget: Math.Round(finalTarget, 2), 
-            Unit: "kcal/day",                              
-            Tdee: Math.Round(tdee, 2),                    
-            NutritionGoal: goal,                           
-            CalorieAdjustment: Math.Round(actualAdjustment, 2), 
-            MinimumFloorApplied: isFloorApplied,          
+            DailyCalorieTarget: Math.Round(finalTarget, 2),
+            Unit: "kcal/day",
+            Tdee: Math.Round(tdee, 2),
+            NutritionGoal: goal,
+            CalorieAdjustment: Math.Round(actualAdjustment, 2),
+            MinimumFloorApplied: isFloorApplied,
             TdeeCalculatedAt: request.TdeeData.CalculatedAt,
-            IsOutdated: isOutdated,                        
+            IsOutdated: isOutdated,
             Disclaimer: _options.Disclaimer);
             return Task.FromResult(dto);
 

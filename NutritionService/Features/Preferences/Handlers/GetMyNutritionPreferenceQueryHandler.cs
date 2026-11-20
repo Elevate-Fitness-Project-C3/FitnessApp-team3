@@ -15,13 +15,17 @@ namespace NutritionService.Features.Preferences.Handlers
 
         public GetMyNutritionPreferenceQueryHandler( IGenericRepository<NutritionPreference> repo)
             =>_repo = repo;
-        public async Task<Result<NutritionGoalDto>> Handle(GetMyNutritionPreferenceQuery request, CancellationToken cancellationToken)
+        public async Task<Result<NutritionGoalDto>> Handle(GetMyNutritionPreferenceQuery request, CancellationToken ct)
         {
-            var preference = await _repo.GetAll()
-            .AsNoTracking().
-            FirstOrDefaultAsync(p => p.UserId == request.UserId);
-            if (preference is null)
-
+            var preferenceDto = await _repo.GetAll()
+            .AsNoTracking()
+            .Where(p => p.UserId == request.UserId)
+            .Select(p=>new NutritionGoalDto(
+                p.UserId,
+                true,
+                p.NutritionGoal,
+                p.UpdatedAt)).FirstOrDefaultAsync(ct);
+            if (preferenceDto is null)
             {
                 return Result.Success(new NutritionGoalDto(
                     request.UserId,
@@ -29,12 +33,7 @@ namespace NutritionService.Features.Preferences.Handlers
                     NutritionGoal: null,
                     UpdatedAt: null));
             }
-
-            return Result.Success(new NutritionGoalDto(
-                preference.UserId,
-                IsConfigured: true,
-                NutritionGoal: preference.NutritionGoal,
-                UpdatedAt: preference.UpdatedAt));
+            return Result.Success(preferenceDto);
         }
     }
 }
