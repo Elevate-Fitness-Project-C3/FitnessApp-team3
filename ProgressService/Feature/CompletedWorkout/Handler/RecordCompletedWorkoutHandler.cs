@@ -1,7 +1,7 @@
 ﻿using ProgressService.Domains.Entities;
 using ProgressService.Domains.Enums.CompletedWorkout;
+using ProgressService.Domains.Repositories;
 using ProgressService.Feature.CompletedWorkout.Command;
-using ProgressService.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -11,29 +11,39 @@ namespace ProgressService.Feature.CompletedWorkout.Handler
     public class RecordCompletedWorkoutHandler
     : IRequestHandler<CreateCompletedWorkoutCommand, RecordResult>
     {
-        private readonly ProgressDbContext _db;
-        public RecordCompletedWorkoutHandler(ProgressDbContext db) => _db = db;
+        private readonly IGenericRepository<CompletedWorkoutRecord> _repository;
+        private readonly IUnitOfWork _unitOfWork;
+
+        public RecordCompletedWorkoutHandler(
+            IGenericRepository<CompletedWorkoutRecord> repository,
+            IUnitOfWork unitOfWork)
+        {
+            _repository = repository;
+            _unitOfWork = unitOfWork;
+        }
         
         public async Task<RecordResult> Handle(CreateCompletedWorkoutCommand request, CancellationToken cancellationToken)
         {
-            // Check  Duplicate Record
-            var existingRecord = await _db.CompletedWorkoutRecords
-               .AnyAsync(x => x.SessionId == request.SessionId , cancellationToken);
-            if(existingRecord)
-            {
-                return RecordResult.Duplicate;
-            }
-
-            _db.CompletedWorkoutRecords.Add(
-                CompletedWorkoutRecord.Create(
-                    request.SessionId, request.UserId, request.ProgramId,
-                    request.ProgramWorkoutId, request.CompletedAt, request.Version));
+            var result = RecordResult.Created;
 
             try
             {
-                await _db.SaveChangesAsync(cancellationToken);
-                return RecordResult.Created;
+                await _unitOfWork.ExecuteAsync(async () =>
+                {
+                    var existingRecord = await _repository.GetAll()
+                        .AnyAsync(x => x.SessionId == request.SessionId, cancellationToken);
+                    if (existingRecord)
+                    {
+                        result = RecordResult.Duplicate;
+                        return;
+                    }
 
+                    _repository.Add(CompletedWorkoutRecord.Create(
+                        request.SessionId, request.UserId, request.ProgramId,
+                        request.ProgramWorkoutId, request.CompletedAt, request.Version));
+                }, cancellationToken);
+
+                return result;
             }
             catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {

@@ -221,6 +221,9 @@ namespace ProgressService.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SessionId")
+                        .IsUnique();
+
                     b.ToTable("CompletedWorkoutRecords", (string)null);
                 });
 
