@@ -32,8 +32,6 @@ namespace TrainingService.Infrastructure.Persistence.Configurations
             builder.Property(x => x.IsDeleted)
                 .IsRequired();
 
-
-            builder.HasQueryFilter(x => !x.IsDeleted);
         }
     }
 }
