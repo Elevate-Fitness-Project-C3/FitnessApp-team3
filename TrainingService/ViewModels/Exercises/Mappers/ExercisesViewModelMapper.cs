@@ -1,5 +1,6 @@
 ﻿using TrainingService.Dtos.Exercises;
 using TrainingService.ViewModels.Exercises.CreateExercise;
+using TrainingService.ViewModels.Exercises.GetExercises;
 
 namespace TrainingService.ViewModels.Exercises.Mappers
 {
@@ -14,6 +15,30 @@ namespace TrainingService.ViewModels.Exercises.Mappers
                 TargetMuscleGroup = viewModel.TargetMuscleGroup,
                 TrackingType = (Domain.Enums.ExerciseTrackingType)viewModel.TrackingType,
                 IsActive = viewModel.IsActive
+            };
+        }
+
+
+        public static GetExercisesRequestDto ToDto(this GetExercisesRequestVM viewModel)
+        {
+            return new GetExercisesRequestDto
+            {
+                PageIndex = viewModel.PageIndex ?? 1,
+                PageSize = viewModel.PageSize ?? 10
+            };
+        }
+
+        public static GetExercisesVM ToViewModel(this GetExercisesDto dto)
+        {
+            return new GetExercisesVM
+            {
+                Id = dto.Id,
+                Name = dto.Name,
+                Description = dto.Description,
+                TargetMuscleGroup = dto.TargetMuscleGroup,
+                TrackingTypeID = dto.TrackingTypeID,
+                TrackingType = dto.TrackingType,
+                IsActive = dto.IsActive
             };
         }
     }

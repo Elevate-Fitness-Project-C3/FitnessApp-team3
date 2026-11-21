@@ -1,8 +1,11 @@
 ﻿
 using MediatR;
+using TrainingService.Dtos.Exercises;
 using TrainingService.Dtos.Shared;
 using TrainingService.Features.Exercises.CreateExercise;
+using TrainingService.Features.Exercises.GetExercises;
 using TrainingService.ViewModels.Exercises.CreateExercise;
+using TrainingService.ViewModels.Exercises.GetExercises;
 using TrainingService.ViewModels.Exercises.Mappers;
 
 
@@ -27,8 +30,24 @@ public static class ExerciseEndpoints
         })
         .WithName("CreateExercise");
 
-        // Later:
+
         // group.MapGet("/", GetAllExercises);
+        group.MapGet("/", async ( [AsParameters] GetExercisesRequestVM viewModel, ISender sender, CancellationToken cancellationToken) =>
+        {
+
+            var query = new GetExercisesQuery(viewModel.ToDto());
+
+            var result = await sender.Send( query, cancellationToken);
+
+            var response = EndpointResponse<PaginatedResult<GetExercisesDto>>.FromResult(result);
+
+            return Results.Json( response,statusCode: result.StatusCode);
+        })
+        .WithName("GetAllExercises")
+        .WithSummary("Get paginated exercises")
+        .WithTags("Exercises")
+        .Produces<EndpointResponse<PaginatedResult<GetExercisesDto>>>(200);
+
         // group.MapGet("/{id:guid}", GetExerciseById);
         // group.MapPut("/{id:guid}", UpdateExercise);
         // group.MapDelete("/{id:guid}", DeleteExercise);
