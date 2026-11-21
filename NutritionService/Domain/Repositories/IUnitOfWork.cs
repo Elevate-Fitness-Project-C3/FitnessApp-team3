@@ -4,7 +4,6 @@ public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(
         CancellationToken ct = default);
-
     Task ExecuteAsync(
         Func<CancellationToken, Task> action,
         CancellationToken ct = default);

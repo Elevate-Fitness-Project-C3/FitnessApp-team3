@@ -54,7 +54,7 @@ namespace NutritionService.Domain.Entities
             if (calories < 0)
                 return Result.Failure(Error.Validation(
                     "Meal.InvalidCalories",
-                    "Calories (kcal) must be a positive non-negative value."));
+                    "Calories (kcal) must be non-negative value."));
             if (proteinGrams < 0)
                 return Result.Failure(Error.Validation(
                     "Meal.InvalidProtein",
