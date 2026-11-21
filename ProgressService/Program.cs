@@ -1,7 +1,9 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using ProgressService.Domains.Repositories;
 using ProgressService.Feature.CompletedWorkout.Consumers;
 using ProgressService.Infrastructure.Persistence;
+using ProgressService.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +14,19 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<ProgressDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddMediatR(config =>
     config.RegisterServicesFromAssemblyContaining<WorkoutCompletedConsumer>());
 
 builder.Services.AddMassTransit(config => {
     config.AddConsumer<WorkoutCompletedConsumer>();
+    config.AddConfigureEndpointsCallback((context, _, endpoint) =>
+    {
+        endpoint.UseMessageRetry(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
+        endpoint.UseEntityFrameworkOutbox<ProgressDbContext>(context);
+    });
 
     config.AddEntityFrameworkOutbox<ProgressDbContext>(o =>
     {

@@ -23,6 +23,7 @@ namespace ProgressService.Infrastructure.Persistence
             {
                 entity.ToTable("CompletedWorkoutRecords");
                 entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.SessionId).IsUnique();
             });
         }
     }
