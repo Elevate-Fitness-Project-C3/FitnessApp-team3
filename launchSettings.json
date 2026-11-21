@@ -8,7 +8,8 @@
         "fitnessprofileservice": "StartDebugging",
         "trainingservice": "StartDebugging",
         "progressservice": "StartDebugging",
-        "nutritionservice": "StartDebugging"
+        "nutritionservice": "StartDebugging",
+        "paymentservice": "StartDebugging"
       }
     }
   }
