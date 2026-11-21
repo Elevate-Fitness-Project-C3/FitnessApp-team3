@@ -4,6 +4,6 @@ using TrainingService.Dtos.Shared;
 
 namespace TrainingService.Features.Exercises.CreateExercise
 {
-    public record CreateExerciseCommand(CreateExerciseDto CreateExerciseDto) : IRequest<RequestResponse<bool>>;
+    public record CreateExerciseCommand(CreateExerciseDto CreateExerciseDto) : IRequest<RequestResponse<Guid>>;
 
 }

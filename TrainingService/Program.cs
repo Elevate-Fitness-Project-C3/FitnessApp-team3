@@ -1,4 +1,5 @@
 using exam_system.Persistence;
+using TrainingService.Features.Exercises;
 using TrainingService.Infrastructure.Context;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,10 @@ builder.Services.AddPersistenceServices(
     builder.Configuration);
 
 var app = builder.Build();
+
+
+//For Apis
+app.MapExerciseEndpoints();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())

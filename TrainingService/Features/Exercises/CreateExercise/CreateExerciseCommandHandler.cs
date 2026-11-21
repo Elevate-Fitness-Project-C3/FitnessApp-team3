@@ -1,6 +1,38 @@
-﻿namespace TrainingService.Features.Exercises.CreateExercise
+﻿using exam_system.Persistence.DataAccess;
+using MediatR;
+using TrainingService.Domain.Entities;
+using TrainingService.Dtos.Shared;
+
+namespace TrainingService.Features.Exercises.CreateExercise
 {
-    public class CreateExerciseCommandHandler
+    public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseCommand, RequestResponse<Guid>>
     {
+
+        private readonly IGenericRepository<Exercise> _diplomaRepository;
+        private readonly IUnitOfWork _unitOfWork;
+
+        public CreateExerciseCommandHandler(IGenericRepository<Exercise> diplomaRepository, IUnitOfWork unitOfWork)
+        {
+            _diplomaRepository = diplomaRepository;
+            _unitOfWork = unitOfWork;
+        }
+
+
+        public async Task<RequestResponse<Guid>> Handle(CreateExerciseCommand request, CancellationToken cancellationToken)
+        {
+            var exercise = new Exercise
+            {
+                Id = Guid.NewGuid(),
+                Name = request.CreateExerciseDto.Name,
+                Description = request.CreateExerciseDto.Description,
+                TargetMuscleGroup = request.CreateExerciseDto.TargetMuscleGroup,
+                TrackingType = request.CreateExerciseDto.TrackingType,
+                IsActive = true
+            };
+
+            await _unitOfWork.ExecuteAsync(async () => { await _diplomaRepository.AddAsync(exercise); }, cancellationToken);
+
+            return RequestResponse<Guid>.Created( exercise.Id,"Exercise created successfully");
+        }
     }
 }

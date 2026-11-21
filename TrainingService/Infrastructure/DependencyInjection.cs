@@ -1,6 +1,9 @@
 
 using exam_system.Persistence.DataAccess;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Features.Exercises.CreateExercise;
+using TrainingService.Features.Shared;
 using TrainingService.Infrastructure.Context;
 using TrainingService.Infrastructure.DataAccess;
 
@@ -24,7 +27,17 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        //For Validation
+        services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(
+                typeof(Program).Assembly);
+
+            cfg.AddOpenBehavior(
+                typeof(ValidationBehavior<,>));
+        });
 
         return services;
     }
