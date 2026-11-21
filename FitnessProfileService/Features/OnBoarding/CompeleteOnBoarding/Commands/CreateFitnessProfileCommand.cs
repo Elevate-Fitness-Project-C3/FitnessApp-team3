@@ -1,5 +1,5 @@
 ﻿using FitnessProfileService.Common.Enums;
-using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Dtos;
+
 using MediatR;
 
 namespace FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Commands

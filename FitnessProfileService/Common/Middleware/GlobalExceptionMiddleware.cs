@@ -28,6 +28,7 @@ public class GlobalExceptionMiddleware(
                     "You are not authorized to access this resource."),
                 KeyNotFoundException => (StatusCodes.Status404NotFound,
                     "The requested resource was not found."),
+                BadRequestException => (StatusCodes.Status400BadRequest, exception.Message),
                 NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
                 ConflictException => (StatusCodes.Status409Conflict, exception.Message),
                 GoneException => (StatusCodes.Status410Gone, exception.Message),

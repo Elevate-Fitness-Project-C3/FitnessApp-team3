@@ -1,10 +1,14 @@
 
 using FitnessProfileService.Common.Middleware;
+using FitnessProfileService.Common.Behaviors;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Endpoints;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Handlers;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Orchestrators;
+using FitnessProfileService.Features.OnBoarding.Set_training_preferences.Commands;
+using FitnessProfileService.Features.OnBoarding.Set_training_preferences.Endpoints;
 using FitnessProfileService.Infrastructure;
 using FitnessProfileService.Infrastructure.Persistence;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,13 +19,20 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 
-// Register MediatR and scan handlers in the Onboarding assembly
+// Register MediatR and Validation Pipeline
 builder.Services.AddMediatR(
     typeof(CompleteOnboardingOrchestratorHandler).Assembly);
 
+builder.Services.AddValidatorsFromAssembly(
+    typeof(UpdateTrainingPreferencesCommand).Assembly);
+
+builder.Services.AddTransient(
+    typeof(IPipelineBehavior<,>),
+    typeof(ValidationBehavior<,>));
 
 
 
+// Register Persistence
 builder.Services.AddIdentityPersistence(options =>
 {
     options.UseSqlServer(
@@ -40,11 +51,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
 
 // Map Minimal API Endpoints
 app.MapCompleteOnboardingEndpoint();
+app.MapUpdateTrainingPreferencesEndpoint();
 
 // 4. Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())
