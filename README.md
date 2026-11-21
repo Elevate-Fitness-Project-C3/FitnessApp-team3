@@ -10,7 +10,7 @@ From the repository root:
 
 ```powershell
 Copy-Item .env.example .env
-# Edit .env and replace both example passwords.
+# Configure database, RabbitMQ, SMTP, OTP, and JWT values in .env.
 docker compose up --build -d
 docker compose ps -a
 ```
@@ -35,7 +35,9 @@ contains all service environment settings, enables Development, and publishes
 ports only on localhost. Container traffic uses
 HTTP on port 8080, so no local HTTPS certificate mounts are needed. Identity
 Swagger UI is at http://localhost:5002/swagger. The other API scaffolds currently
-expose `/openapi/v1.json` and `/weatherforecast`.
+expose `/openapi/v1.json` and a bearer-protected `/weatherforecast`. Configure the
+signing and verification keys before starting the APIs. [Access token verification
+and key setup](docs/access-token-verification.md)
 
 Inside the Compose network, use service names and container ports, for example
 `http://fitnessprofileservice:8080`, `sqlserver,1433`, and `rabbitmq:5672`.

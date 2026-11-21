@@ -10,6 +10,10 @@ public class ApplicationUser : BaseEntity
     public required string PasswordHash { get; set; }
     public required string Role { get; set; }
     public bool IsEmailVerified { get; set; }
+    public bool IsEnabled { get; set; } = true;
+    public int FailedLoginAttempts { get; set; }
+    public DateTimeOffset? LockoutEnd { get; set; }
+    public byte[] RowVersion { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public ICollection<OtpCode> OtpCodes { get; set; } = new List<OtpCode>();

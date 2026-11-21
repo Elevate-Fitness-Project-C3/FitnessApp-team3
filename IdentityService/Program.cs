@@ -1,4 +1,6 @@
 using Carter;
+using IdentityService.Infrastructure.Settings;
+using Microsoft.IdentityModel.Tokens;
 using IdentityService.Common.Middleware;
 using IdentityService.Infrastructure;
 using IdentityService.Features.Shared;
@@ -7,6 +9,15 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (args is ["--export-public-key", var path])
+{
+    var settings = builder.Configuration.GetRequiredSection(JwtSettings.SectionName).Get<JwtSettings>()!;
+    using var key = settings.LoadSigningKey();
+    using var output = new StreamWriter(new FileStream(path, FileMode.CreateNew, FileAccess.Write));
+    output.WriteLine(key.ExportSubjectPublicKeyInfoPem());
+    return;
+}
 
 builder.Services.AddCarter();
 builder.Services.AddOpenApi();
@@ -28,6 +39,16 @@ builder.Services.AddRateLimiter(options =>
             RequestResponse<object>.Fail("Too many requests. Try again later.", 429),
             cancellationToken);
     };
+    options.AddPolicy("login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
     options.AddPolicy("registration", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -62,6 +83,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+app.Services.GetRequiredService<SigningCredentials>();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 

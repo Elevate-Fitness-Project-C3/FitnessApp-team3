@@ -5,7 +5,7 @@ namespace IdentityService.Domain.Entities.Identity;
 public class RefreshToken : BaseEntity
 {
     public int UserId { get; set; }
-    public required string Token { get; set; }
+    public required string TokenHash { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
 

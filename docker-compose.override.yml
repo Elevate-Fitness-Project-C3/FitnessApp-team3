@@ -2,6 +2,10 @@ x-development: &development
   environment: &api-environment
     ASPNETCORE_ENVIRONMENT: Development
     ASPNETCORE_HTTP_PORTS: "8080"
+    JwtSettings__Issuer: ${JWT_ISSUER:-FitnessApp.Identity}
+    JwtSettings__Audience: ${JWT_AUDIENCE:-FitnessApp.Api}
+    JwtSettings__KeyId: ${JWT_KEY_ID:-fitness-1}
+    JwtSettings__PublicKeyPem: ${JWT_PUBLIC_KEY_PEM:-}
 
 services:
   identityservice:
@@ -17,6 +21,7 @@ services:
       SmtpSettings__Username: ${SMTP_USERNAME:-}
       SmtpSettings__Password: ${SMTP_PASSWORD:-}
       OtpSettings__ProtectionKey: ${OTP_PROTECTION_KEY:-}
+      JwtSettings__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:-}
     ports:
       - "127.0.0.1:5002:8080"
 
