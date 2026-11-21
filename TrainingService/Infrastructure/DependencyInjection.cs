@@ -10,15 +10,21 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
-            ?? "Server=.\\SQLEXPRESS;Database=ExaminationSystemDb;Trusted_Connection=True;MultipleActiveResultSets=true";
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+                                                 ?? throw new InvalidOperationException(
+                                                 "DefaultConnection is missing.");
 
-        //services.AddDbContext<TrainingDbContext>(options =>
-        //    options.UseSqlServer(connectionString));
+
+        services.AddDbContext<TrainingDbContext>(options =>
+        {
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"));
+        });
+
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
