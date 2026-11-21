@@ -53,6 +53,7 @@ services:
       dockerfile: PaymentService/Dockerfile
 
   sqlserver:
+
     image: &sqlserver-image mcr.microsoft.com/mssql/server:2022-latest
     volumes:
       - sqlserver-data:/var/opt/mssql
