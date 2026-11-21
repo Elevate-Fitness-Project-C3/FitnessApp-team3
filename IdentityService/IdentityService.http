@@ -1,5 +1,19 @@
 @IdentityService_HostAddress = https://localhost:7220
 
+### Login after verifying the email address
+# @name login
+POST {{IdentityService_HostAddress}}/api/identity/login
+Content-Type: application/json
+
+{
+  "email": "new.user@example.com",
+  "password": "Example-only long password 42!"
+}
+
+### Use the access token in Fitness Profile
+GET https://localhost:7276/weatherforecast
+Authorization: Bearer {{login.response.body.$.data.accessToken}}
+
 ### Register; use an address you control for an actual email.
 POST {{IdentityService_HostAddress}}/api/identity/register
 Content-Type: application/json
