@@ -7,4 +7,7 @@ public interface IUnitOfWork : IDisposable
     Task RollbackTransactionAsync();
     Task<int> SaveChangesAsync();
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    Task ExecuteAsync(
+        Func<Task> action,
+        CancellationToken cancellationToken = default);
 }
