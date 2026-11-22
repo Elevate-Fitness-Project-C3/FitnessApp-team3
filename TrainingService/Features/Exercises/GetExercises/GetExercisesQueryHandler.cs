@@ -1,11 +1,9 @@
-﻿using exam_system.Persistence.DataAccess;
-using MediatR;
+﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Domain.Entities;
 using TrainingService.Dtos.Exercises;
 using TrainingService.Dtos.Shared;
-using TrainingService.Features.Exercises.CreateExercise;
-using static Azure.Core.HttpHeader;
+using TrainingService.Infrastructure.DataAccess;
 
 namespace TrainingService.Features.Exercises.GetExercises
 {

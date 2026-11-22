@@ -2,6 +2,7 @@
 using MediatR;
 using TrainingService.Dtos.Exercises;
 using TrainingService.Dtos.Shared;
+using TrainingService.Features.Exercises.ChangeExerciseStatus;
 using TrainingService.Features.Exercises.CreateExercise;
 using TrainingService.Features.Exercises.GetExercises;
 using TrainingService.ViewModels.Exercises.CreateExercise;
@@ -43,12 +44,24 @@ public static class ExerciseEndpoints
 
             return Results.Json( response,statusCode: result.StatusCode);
         })
-        .WithName("GetAllExercises")
-        .WithSummary("Get paginated exercises")
-        .WithTags("Exercises")
-        .Produces<EndpointResponse<PaginatedResult<GetExercisesDto>>>(200);
+        .WithName("GetAllExercises");
 
-        // group.MapGet("/{id:guid}", GetExerciseById);
+
+        // group.MapGet("/{id:guid}", DeactivateExerciseStatusById);
+        group.MapPatch("/{id:guid}/status", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var command = new ChangeExerciseStatusCommand(id);
+
+            var result = await sender.Send(command, cancellationToken);
+
+            var response = EndpointResponse<bool>.FromResult(result);
+
+            return Results.Json( response, statusCode: result.StatusCode);
+        })
+        .WithName("ChangeExerciseStatus");
+
+
+
         // group.MapPut("/{id:guid}", UpdateExercise);
         // group.MapDelete("/{id:guid}", DeleteExercise);
 

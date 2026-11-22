@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using TrainingService.Domain.Common;
 
-namespace exam_system.Persistence.DataAccess;
+namespace TrainingService.Infrastructure.DataAccess;
 
 public interface IGenericRepository<T> where T : BaseEntity
 {

@@ -1,19 +1,19 @@
-﻿using exam_system.Persistence.DataAccess;
-using MediatR;
+﻿using MediatR;
 using TrainingService.Domain.Entities;
 using TrainingService.Dtos.Shared;
+using TrainingService.Infrastructure.DataAccess;
 
 namespace TrainingService.Features.Exercises.CreateExercise
 {
     public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseCommand, RequestResponse<Guid>>
     {
 
-        private readonly IGenericRepository<Exercise> _diplomaRepository;
+        private readonly IGenericRepository<Exercise> _genericRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CreateExerciseCommandHandler(IGenericRepository<Exercise> diplomaRepository, IUnitOfWork unitOfWork)
+        public CreateExerciseCommandHandler(IGenericRepository<Exercise> genericRepository, IUnitOfWork unitOfWork)
         {
-            _diplomaRepository = diplomaRepository;
+            _genericRepository = genericRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -30,7 +30,7 @@ namespace TrainingService.Features.Exercises.CreateExercise
                 IsActive = true
             };
 
-            await _unitOfWork.ExecuteAsync(async () => { await _diplomaRepository.AddAsync(exercise); }, cancellationToken);
+            await _unitOfWork.ExecuteAsync(async () => { await _genericRepository.AddAsync(exercise); }, cancellationToken);
 
             return RequestResponse<Guid>.Created( exercise.Id,"Exercise created successfully");
         }

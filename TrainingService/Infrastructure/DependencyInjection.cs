@@ -1,5 +1,4 @@
 
-using exam_system.Persistence.DataAccess;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Features.Exercises.CreateExercise;

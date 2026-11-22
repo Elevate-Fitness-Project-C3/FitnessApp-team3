@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using exam_system.Persistence.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TrainingService.Domain.Common;

@@ -1,4 +1,4 @@
-namespace exam_system.Persistence.DataAccess;
+namespace TrainingService.Infrastructure.DataAccess;
 
 public interface IUnitOfWork : IDisposable
 {

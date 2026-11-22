@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.Storage;
 using TrainingService.Infrastructure.Context;
 
-namespace exam_system.Persistence.DataAccess;
+namespace TrainingService.Infrastructure.DataAccess;
 
 public class UnitOfWork : IUnitOfWork
 {
