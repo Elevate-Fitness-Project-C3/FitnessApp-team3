@@ -1,6 +1,7 @@
 ﻿using TrainingService.Dtos.Exercises;
 using TrainingService.ViewModels.Exercises.CreateExercise;
 using TrainingService.ViewModels.Exercises.GetExercises;
+using TrainingService.ViewModels.Exercises.UpdateExercise;
 
 namespace TrainingService.ViewModels.Exercises.Mappers
 {
@@ -39,6 +40,18 @@ namespace TrainingService.ViewModels.Exercises.Mappers
                 TrackingTypeID = dto.TrackingTypeID,
                 TrackingType = dto.TrackingType,
                 IsActive = dto.IsActive
+            };
+        }
+
+        public static UpdateExerciseDto ToDto(this UpdateExerciseVM viewModel)
+        {
+            return new UpdateExerciseDto
+            {
+                Name = viewModel.Name,
+                Description = viewModel.Description,
+                TargetMuscleGroup = viewModel.TargetMuscleGroup,
+                TrackingType = (Domain.Enums.ExerciseTrackingType)viewModel.TrackingType,
+                IsActive = viewModel.IsActive
             };
         }
     }

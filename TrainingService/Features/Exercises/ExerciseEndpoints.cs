@@ -5,9 +5,11 @@ using TrainingService.Dtos.Shared;
 using TrainingService.Features.Exercises.ChangeExerciseStatus;
 using TrainingService.Features.Exercises.CreateExercise;
 using TrainingService.Features.Exercises.GetExercises;
+using TrainingService.Features.Exercises.UpdateExercise;
 using TrainingService.ViewModels.Exercises.CreateExercise;
 using TrainingService.ViewModels.Exercises.GetExercises;
 using TrainingService.ViewModels.Exercises.Mappers;
+using TrainingService.ViewModels.Exercises.UpdateExercise;
 
 
 namespace TrainingService.Features.Exercises;
@@ -63,6 +65,22 @@ public static class ExerciseEndpoints
 
 
         // group.MapPut("/{id:guid}", UpdateExercise);
+
+        group.MapPut("/{id:guid}", async (Guid id,UpdateExerciseVM viewModel, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var dto = viewModel.ToDto();
+            var command = new UpdateExerciseCommand(id, dto);
+
+            var result = await sender.Send(command, cancellationToken);
+
+            var response = EndpointResponse<bool>.FromResult(result);
+
+            return Results.Json(
+                response,
+                statusCode: result.StatusCode);
+        })
+        .WithName("UpdateExercise");
+
         // group.MapDelete("/{id:guid}", DeleteExercise);
 
         return app;
