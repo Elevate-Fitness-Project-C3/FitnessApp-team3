@@ -1,4 +1,4 @@
-
+using FitnessApp.Authentication;
 using FitnessProfileService.Common.Middleware;
 using FitnessProfileService.Common.Behaviors;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Endpoints;
@@ -13,6 +13,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // 1. Register Services
 builder.Services.AddOpenApi();
@@ -51,6 +52,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Map Minimal API Endpoints

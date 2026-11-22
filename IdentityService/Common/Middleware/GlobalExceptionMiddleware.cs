@@ -21,6 +21,7 @@ public class GlobalExceptionMiddleware(
         {
             var (statusCode, message) = exception switch
             {
+                InvalidLoginCredentialsException => (StatusCodes.Status401Unauthorized, exception.Message),
                 UnauthorizedAccessException => (StatusCodes.Status401Unauthorized,
                     "You are not authorized to access this resource."),
                 KeyNotFoundException => (StatusCodes.Status404NotFound,

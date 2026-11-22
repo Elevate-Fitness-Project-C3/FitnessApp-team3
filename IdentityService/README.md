@@ -25,8 +25,8 @@ MediatR dispatch and cached repository access follow
 the reference. Other operations retain the DTO, event, and view model folders
 present in that reference. Empty folders contain `.gitkeep` files.
 
-Registration and verification-email initiation are implemented. Login, email
-verification/resend, password reset, logout, and token issuance remain scaffolds.
+Registration, email verification, resend, and password login with token issuance are implemented.
+Password reset, refresh rotation, and logout are separate features.
 
 ## API startup
 
@@ -101,19 +101,19 @@ to use a different SQL Server instance. Production requires an explicit connecti
 string.
 
 The initial migration creates the three tables from the identity diagram.
-`AddUserRegistration` extends them with the registration fields:
+`AddUserRegistration` and `AddLoginProtection` extend them for registration and login.
 
 | Table | Primary key | Other columns |
 | --- | --- | --- |
-| `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt` |
+| `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt`, `IsEnabled`, `FailedLoginAttempts`, `LockoutEnd`, `RowVersion` |
 | `OtpCode` | `OtpId` | `UserId`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
-| `RefreshToken` | `TokenId` | `UserId`, `Token`, `ExpiresAt`, `RevokedAt` |
+| `RefreshToken` | `TokenId` | `UserId`, `TokenHash`, `ExpiresAt`, `RevokedAt` |
 
 The entities inherit the repository's integer `Id` property, which EF maps to the
 diagram's primary-key column names. A user has many OTP codes and refresh tokens.
 Both child tables have required, indexed foreign keys; deleting a user cascades
 to its codes and tokens. Normalized emails, challenge identifiers, and refresh-token
-values have unique indexes. `RevokedAt` is nullable; `Name` is nullable for legacy
+hashes have unique indexes. `RevokedAt` is nullable. `Name` is nullable for legacy
 accounts whose names are unknown. Registration always requires a name.
 Timestamps use `DateTimeOffset` in UTC. `Role` remains a required string;
 registration always sets it to `User`.
@@ -135,7 +135,7 @@ secrets or the environment before running the command. Migrations are applied
 explicitly; starting the API does not change the database schema.
 
 Apply this change in a maintenance window: stop the old service, take a backup,
-apply both migrations, configure SMTP/OTP settings, and start the new service.
+apply pending migrations, configure SMTP, OTP, and JWT settings, and start the new service.
 The old and new OTP schemas are not compatible with a rolling deployment.
 The migration backfills ASCII legacy emails with the same trim/uppercase rules.
 It stops atomically for collisions or legacy emails requiring explicit Unicode
@@ -249,9 +249,92 @@ public registration launches; it must generate a fresh code and invalidate previ
 challenges because persisted hashes cannot recover plaintext codes. Delivery is
 not guaranteed or exactly once.
 
+## Login and account protection
+
+`POST /api/identity/login` accepts email and password over HTTPS. A verified, enabled
+account receives a 200 envelope with `data.accessToken` and `Cache-Control: no-store`.
+The host-only `refresh_token` cookie uses `HttpOnly`, `Secure`, `SameSite=Lax`, and
+`Path=/api/identity`. Its expiry matches the stored expiry. This assumes a same-site client
+deployment. The database stores the SHA-256 hash of the opaque token.
+
+Unknown email, wrong password, and unverified, disabled, or locked accounts receive
+the same 401 response. The fifth wrong password locks an eligible account for
+15 minutes. Attempts during lockout preserve its deadline. A successful login clears
+the count. The endpoint also allows 20 requests per IP per minute per service instance.
+
+`LoginOrchestrator` dispatches MediatR queries to load the account and verify the
+password, then commands to update login attempts and issue tokens. A row-version
+conflict restarts the account query and password check. The successful account
+update and refresh-token insert commit in the same transaction.
+
+Apply `AddLoginProtection` before deploying the new service. It enables existing users,
+preserves their email-verification state, starts their failure count at zero, and adds
+a SQL Server row version. It hashes and revokes legacy refresh tokens. Rolling back also
+revokes existing sessions because their plaintext tokens cannot be recovered.
+
+### Configure signing and export the public PEM
+
+Configure a stable RSA private PEM (at least 2048 bits) in IdentityService's secret store
+under `JwtSettings:PrivateKeyPem`. Use the same key across IdentityService replicas
+and restarts. For a **new** local development installation, run this once from the
+repository root in PowerShell 7.4 or later. Skip key generation when a signer already exists.
+
+```powershell
+$rsa = [System.Security.Cryptography.RSA]::Create(3072)
+try {
+    @{ 'JwtSettings:PrivateKeyPem' = $rsa.ExportPkcs8PrivateKeyPem() } |
+        ConvertTo-Json -Compress | dotnet user-secrets set --project IdentityService
+} finally {
+    $rsa.Dispose()
+}
+```
+
+Export from the configured signer. The command creates a new PEM file and exits.
+Choose a fresh output filename for a later export.
+
+```powershell
+New-Item -ItemType Directory -Force artifacts | Out-Null
+$publicPath = Join-Path (Get-Location) 'artifacts/identity-public.pem'
+dotnet run --project IdentityService --launch-profile https -- --export-public-key $publicPath
+$publicPem = [IO.File]::ReadAllText($publicPath)
+foreach ($service in 'FitnessProfileService','NutritionService','PaymentService','ProgressService','TrainingService') {
+    @{ 'JwtSettings:PublicKeyPem' = $publicPem } | ConvertTo-Json -Compress |
+        dotnet user-secrets set --project "$service/$service.csproj"
+}
+```
+
+For Docker Compose, provide multiline `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM`
+in the deployment environment or the ignored local `.env`. Use single quotes around
+multiline values in `.env` to preserve the PEM boundaries and line breaks. Compose
+passes the private PEM exclusively to IdentityService. Supply matching `JWT_ISSUER`,
+`JWT_AUDIENCE`, and `JWT_KEY_ID` to all services when overriding their defaults.
+For local browser testing, trust the development certificate and run the HTTPS profile.
+Use HTTPS ingress when running the browser client against Compose.
+
+```powershell
+dotnet dev-certs https --trust
+dotnet ef database update --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj -- --environment Development
+dotnet run --project IdentityService --launch-profile https
+```
+
+### Use access tokens in the other APIs
+
+Send `Authorization: Bearer <accessToken>` with each protected request. Fitness Profile,
+Nutrition, Payment, Progress, and Training use the shared `AddAccessTokenAuthentication`
+registration and ASP.NET Core JWT bearer middleware. Their sample `/weatherforecast`
+endpoints require authentication. Each API checks the RS256 signature with its local
+public key, the configured issuer and audience, and expiry with zero clock skew.
+Keep clocks synchronized. Role policies use the stored account's `role` claim and
+the principal name is the user ID from `sub`. Validation works while IdentityService is offline.
+[ASP.NET Core JWT bearer documentation](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0)
+
+The defaults are `FitnessApp.Identity` for issuer, `FitnessApp.Api` for audience, and
+`fitness-1` for key ID. Set `JwtSettings:AccessLifetimeMinutes` (default 15) and
+`JwtSettings:RefreshLifetimeDays` (default 7) on IdentityService.
+
 ## Verification
 
 ```powershell
-dotnet build IdentityService/IdentityService.csproj
+dotnet build FitnessApp-team3.slnx
 dotnet ef migrations has-pending-model-changes --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj
 ```

@@ -10,6 +10,8 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
     {
         builder.ToTable("ApplicationUser");
         builder.HasKey(user => user.Id);
+        builder.Property(user => user.IsEnabled).HasDefaultValue(true);
+        builder.Property(user => user.RowVersion).IsRowVersion();
         builder.Property(user => user.Id).HasColumnName("UserId");
         builder.Property(user => user.Name).HasMaxLength(100);
         builder.Property(user => user.Email).HasMaxLength(256).IsRequired();

@@ -3,6 +3,7 @@
     <Build />
   </Project>
   <Project Path="FitnessProfileService/FitnessProfileService.csproj" />
+  <Project Path="FitnessApp.Authentication/FitnessApp.Authentication.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
   <Project Path="NutritionService/NutritionService.csproj" />
   <Project Path="PaymentService/PaymentService.csproj" />
