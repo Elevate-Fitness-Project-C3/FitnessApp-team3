@@ -16,6 +16,8 @@ namespace TrainingService.Domain.Entities
         public int? TargetSets { get; set; }
         public int? TargetReps { get; set; }
         public int? TargetDurationSeconds { get; set; }
+
+        public decimal? Weight { get; set; }
     }
 
 }

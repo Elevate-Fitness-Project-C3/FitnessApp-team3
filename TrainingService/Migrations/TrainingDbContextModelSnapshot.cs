@@ -217,6 +217,9 @@ namespace TrainingService.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("Weight")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid>("WorkoutId")
                         .HasColumnType("uniqueidentifier");
 
