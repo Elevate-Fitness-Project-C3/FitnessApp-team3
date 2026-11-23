@@ -22,7 +22,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FitnessApp.Authentication\FitnessApp.Authentication.csproj" />
+    <PackageReference Include="FluentValidation" Version="12.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Migrations\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
   </ItemGroup>
 
 </Project>

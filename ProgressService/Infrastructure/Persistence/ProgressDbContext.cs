@@ -24,6 +24,8 @@ namespace ProgressService.Infrastructure.Persistence
                 entity.ToTable("CompletedWorkoutRecords");
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.SessionId).IsUnique();
+                entity.HasIndex(e => new { e.UserId, e.CompletedAtUtc, e.Id })
+                    .IsDescending(false, true, true);
             });
         }
     }

@@ -21,6 +21,7 @@ public class GlobalExceptionMiddleware(
         {
             var (statusCode, message) = exception switch
             {
+                InvalidLoginCredentialsException => (StatusCodes.Status401Unauthorized, exception.Message),
                 UnauthorizedAccessException => (StatusCodes.Status401Unauthorized,
                     "You are not authorized to access this resource."),
                 KeyNotFoundException => (StatusCodes.Status404NotFound,
@@ -29,13 +30,17 @@ public class GlobalExceptionMiddleware(
                 ConflictException => (StatusCodes.Status409Conflict, exception.Message),
                 GoneException => (StatusCodes.Status410Gone, exception.Message),
                 ValidationException => (StatusCodes.Status400BadRequest, "Validation failed."),
+                BadHttpRequestException badRequest => (badRequest.StatusCode, "Invalid request."),
+                EmailDeliveryException => (StatusCodes.Status503ServiceUnavailable, exception.Message),
                 _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
             };
 
             if (statusCode >= 500)
-                logger.LogError(exception, "An unhandled exception occurred.");
+                logger.LogError("Request failed with {ExceptionType}, status {StatusCode}, trace {TraceId}.",
+                    exception.GetType().Name, statusCode, context.TraceIdentifier);
             else
-                logger.LogWarning(exception, "Request failed with status code {StatusCode}.", statusCode);
+                logger.LogWarning("Request failed with {ExceptionType}, status {StatusCode}, trace {TraceId}.",
+                    exception.GetType().Name, statusCode, context.TraceIdentifier);
 
             var errors = exception is ValidationException validation
                 ? validation.Errors.GroupBy(error => error.PropertyName)

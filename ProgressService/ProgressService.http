@@ -3,4 +3,7 @@
 GET {{ProgressService_HostAddress}}/weatherforecast/
 Accept: application/json
 
+ 
 ###
+GET {{ProgressService_HostAddress}}/api/progress/history
+Accept: application/json
