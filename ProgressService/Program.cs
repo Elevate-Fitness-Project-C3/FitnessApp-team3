@@ -81,10 +81,8 @@ app.MapGet("/api/progress/history", async Task<IResult> (
     int page = 1,
     int pageSize = 20) =>
 {
-    //if (!CurrentUser.TryGetId(httpContext.User, out var userId))
-    //    return Results.Unauthorized();
-    // How To generate the user Id
-    Guid userId = new Guid();
+    if (!CurrentUser.TryGetId(httpContext.User, out var userId))
+        return Results.Unauthorized();
 
     var query = new GetWorkoutHistoryQuery(userId, page, pageSize);
     var validation = await validator.ValidateAsync(query, cancellationToken);
@@ -92,7 +90,8 @@ app.MapGet("/api/progress/history", async Task<IResult> (
         return Results.ValidationProblem(validation.ToDictionary());
 
     return Results.Ok(await mediator.Send(query, cancellationToken));
-});
+})
+.RequireAuthorization();
 
 app.MapGet("/api/progress/stats", async Task<IResult> (
     HttpContext httpContext,
@@ -104,7 +103,8 @@ app.MapGet("/api/progress/stats", async Task<IResult> (
 
     return Results.Ok(await mediator.Send(
         new GetProgressStatsQuery(userId), cancellationToken));
-});
+})
+.RequireAuthorization();
 
 var summaries = new[]
 {

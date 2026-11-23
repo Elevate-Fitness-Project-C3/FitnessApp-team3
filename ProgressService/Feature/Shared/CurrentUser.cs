@@ -7,7 +7,7 @@ public static class CurrentUser
     public static bool TryGetId(ClaimsPrincipal user, out Guid userId)
     {
         return Guid.TryParse(
-            user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier),
+            user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value,
             out userId);
     }
 }
