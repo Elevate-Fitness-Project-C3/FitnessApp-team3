@@ -3,7 +3,10 @@ using TrainingService.Features.Exercises;
 using TrainingService.Features.Workouts;
 using TrainingService.Infrastructure.Context;
 
+using FitnessApp.Authentication;
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -38,6 +41,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 var summaries = new[]
 {
@@ -56,7 +61,8 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.WithName("GetWeatherForecast");
+.WithName("GetWeatherForecast")
+.RequireAuthorization();
 
 app.Run();
 

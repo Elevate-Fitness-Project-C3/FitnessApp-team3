@@ -1,5 +1,9 @@
 using IdentityService.Domain.Repositories;
 using FluentValidation;
+using IdentityService.Features.Identity.Login.DTOs;
+using IdentityService.Features.Identity.Login.Queries;
+using IdentityService.Features.Identity.Login.Validators;
+using Microsoft.IdentityModel.Tokens;
 using IdentityService.Domain.Entities.Identity;
 using IdentityService.Domain.Services;
 using IdentityService.Features.Identity.Register.Commands;
@@ -33,7 +37,17 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
+        services.AddSingleton<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
+        services.AddSingleton<DummyLoginAccount>();
+        services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
+        services.AddSingleton(_ => configuration.GetRequiredSection(JwtSettings.SectionName).Get<JwtSettings>()!);
+        services.AddSingleton(provider =>
+        {
+            var settings = provider.GetRequiredService<JwtSettings>();
+            using var rsa = settings.LoadSigningKey();
+            var key = new RsaSecurityKey(rsa.ExportParameters(true)) { KeyId = settings.KeyId };
+            return new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
+        });
         services.AddScoped<IOtpService, OtpService>();
         services.AddTransient<ISmtpClient, SmtpClient>();
         services.AddScoped<IEmailSender, MailKitEmailSender>();

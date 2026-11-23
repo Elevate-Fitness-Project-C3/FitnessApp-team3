@@ -2,6 +2,10 @@ x-development: &development
   environment: &api-environment
     ASPNETCORE_ENVIRONMENT: Development
     ASPNETCORE_HTTP_PORTS: "8080"
+    JwtSettings__Issuer: ${JWT_ISSUER:-FitnessApp.Identity}
+    JwtSettings__Audience: ${JWT_AUDIENCE:-FitnessApp.Api}
+    JwtSettings__KeyId: ${JWT_KEY_ID:-fitness-1}
+    JwtSettings__PublicKeyPem: ${JWT_PUBLIC_KEY_PEM:-}
 
 services:
   identityservice:
@@ -17,6 +21,7 @@ services:
       SmtpSettings__Username: ${SMTP_USERNAME:-}
       SmtpSettings__Password: ${SMTP_PASSWORD:-}
       OtpSettings__ProtectionKey: ${OTP_PROTECTION_KEY:-}
+      JwtSettings__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:-}
     ports:
       - "127.0.0.1:5002:8080"
 
@@ -24,6 +29,7 @@ services:
     <<: *development
     environment:
       <<: *api-environment
+      ASPNETCORE_STATICWEBASSETS: /app/bin/Debug/net10.0/FitnessProfileService.staticwebassets.runtime.CT.json
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessProfile;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
     ports:
       - "127.0.0.1:5007:8080"
@@ -72,7 +78,7 @@ services:
       MSSQL_PID: Developer
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
     ports:
-      - "127.0.0.1:1433:1433"
+      - "127.0.0.1:11433:1433"
 
   database-init:
     environment:
@@ -83,5 +89,5 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-fitness}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
     ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
