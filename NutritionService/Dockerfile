@@ -12,6 +12,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["FitnessApp.Authentication/FitnessApp.Authentication.csproj", "FitnessApp.Authentication/"]
 COPY ["NutritionService/NutritionService.csproj", "NutritionService/"]
 RUN dotnet restore "./NutritionService/NutritionService.csproj"
 COPY . .

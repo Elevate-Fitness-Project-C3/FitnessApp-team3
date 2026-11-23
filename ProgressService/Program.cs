@@ -1,3 +1,4 @@
+using FitnessApp.Authentication;
 using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ using ProgressService.Infrastructure.Persistence;
 using ProgressService.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -68,6 +70,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/api/progress/history", async Task<IResult> (
     HttpContext httpContext,
@@ -119,7 +123,8 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.WithName("GetWeatherForecast");
+.WithName("GetWeatherForecast")
+.RequireAuthorization();
 
 app.MapPost("/test/workout-completed", async (
     WorkoutCompleted message,
