@@ -5,7 +5,6 @@
   <Project Path="FitnessProfileService/FitnessProfileService.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
   <Project Path="NutritionService/NutritionService.csproj" />
-  <Project Path="PaymentService/PaymentService.csproj" />
   <Project Path="ProgressService/ProgressService.csproj" />
   <Project Path="TrainingService/TrainingService.csproj" />
 </Solution>

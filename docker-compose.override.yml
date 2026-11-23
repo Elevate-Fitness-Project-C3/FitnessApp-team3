@@ -28,10 +28,10 @@ services:
     ports:
       - "127.0.0.1:5041:8080"
 
-  paymentservice:
-    <<: *development
-    ports:
-      - "127.0.0.1:5035:8080"
+  # paymentservice:
+  #   <<: *development
+  #   ports:
+  #     - "127.0.0.1:5035:8080"
 
   sqlserver:
     ports:
