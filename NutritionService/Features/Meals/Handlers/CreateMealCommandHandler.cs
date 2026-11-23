@@ -18,7 +18,7 @@ namespace NutritionService.Features.Meals.Handlers
 
         public async Task<Result<Guid>> Handle(CreateMealCommand request, CancellationToken ct)
         {
-            var createResult = Meal.Create(request.Name, request.MealType, request.Calories, request.Calories);
+            var createResult = Meal.Create(request.Name, request.MealType, request.Calories, request.ProteinGrams);
             if (createResult.IsFailure)
                 return Result.Failure<Guid>(
                     createResult.Error);

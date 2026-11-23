@@ -2,7 +2,6 @@
 using NutritionService.Features.CalorieTarget.Enums;
 using NutritionService.Features.CalorieTarget.Orchestrator;
 using NutritionService.Features.CalorieTarget.ViewModels;
-using System.Runtime.CompilerServices;
 
 namespace NutritionService.EndPoints
 {
@@ -19,12 +18,20 @@ namespace NutritionService.EndPoints
                     return Results.Ok(result.Value!.ToViewModel());
                 return result.ErrorCode switch
                 {
-                    TargetError.GoalNotSet => Results.UnprocessableEntity(new { error = result.Error }),
-                    TargetError.ProfileIncomplete=>Results.UnprocessableEntity(new {error=result.Error}),
-                    TargetError.ServiceUnavailable=> Results.Json(
-                        new { error =result.Error},
-                        statusCode:StatusCodes.Status503ServiceUnavailable),
-                    _=>Results.BadRequest(new { error = result.Error})
+                    TargetError.GoalNotSet
+                      or TargetError.ProfileIncomplete
+                      or TargetError.TdeeOutdated
+                      => Results.UnprocessableEntity(
+                          new { error = result.Error }),
+
+                    TargetError.ServiceUnavailable
+                        => Results.Json(
+                            new { error = result.Error },
+                            statusCode: StatusCodes
+                                .Status503ServiceUnavailable),
+
+                    _ => Results.BadRequest(
+                        new { error = result.Error })
                 };
             });
             return app;

@@ -19,7 +19,10 @@ namespace NutritionService.Features.Meals.Handlers
                              .AsNoTracking()
                              .Where(m => m.IsActive);
             if (!string.IsNullOrWhiteSpace(request.Search))
-                query.Where(m => m.Name.Contains(request.Search.Trim()));
+            {
+                var meal = request.Search.Trim();
+                query = query.Where(m => m.Name.Contains(meal));
+            }
 
             if (request.MealType.HasValue)
                 query = query.Where(m => m.MealType == request.MealType.Value);

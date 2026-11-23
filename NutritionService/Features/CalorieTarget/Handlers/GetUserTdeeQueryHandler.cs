@@ -9,19 +9,21 @@ namespace NutritionService.Features.CalorieTarget.Handlers
 {
     public class GetUserTdeeQueryHandler : IRequestHandler<GetUserTdeeQuery, FitnessProfileTdeeDto>
     {
-        private readonly HttpClient _httpClient;
+        public const string ClientName = "FitnessProfile";
+        private readonly IHttpClientFactory _httpFactory;
         private readonly ILogger<GetUserTdeeQueryHandler> _logger;
 
-        public GetUserTdeeQueryHandler(HttpClient httpClient, ILogger<GetUserTdeeQueryHandler> logger)
+        public GetUserTdeeQueryHandler(IHttpClientFactory httpFactory, ILogger<GetUserTdeeQueryHandler> logger)
         {
-            _httpClient = httpClient;
+            _httpFactory = httpFactory;
             _logger = logger;
         }
         public async Task<FitnessProfileTdeeDto> Handle(GetUserTdeeQuery request, CancellationToken ct)
         {
             try
             {
-                using var response = await _httpClient.GetAsync("/api/fitness-profiles/me/tdee", ct);
+                var client = _httpFactory.CreateClient(ClientName);
+                using var response = await client.GetAsync("api/fitness-profiles/me/tdee", ct);
                 if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.UnprocessableEntity)
                 {
                     return new FitnessProfileTdeeDto(
@@ -39,8 +41,8 @@ namespace NutritionService.Features.CalorieTarget.Handlers
                         Tdee: null,
                         ErrorMessage: "Fitness profile service is currently unavailable.");
                 }
-                var payload= await response.Content.ReadFromJsonAsync<TdeeResponseDto>(ct);
-                if(payload?.tdee is null or <= 0)
+                var payload = await response.Content.ReadFromJsonAsync<TdeeResponseDto>(ct);
+                if (payload?.tdee is null or <= 0)
                 {
                     return new FitnessProfileTdeeDto(
                         FitnessProfileTdeeStatus.ProfileIncomplete,
@@ -51,21 +53,21 @@ namespace NutritionService.Features.CalorieTarget.Handlers
                 return new FitnessProfileTdeeDto(
                     FitnessProfileTdeeStatus.Available,
                     Tdee: payload.tdee.Value,
-                    CalculatedAt:payload.CalculatedAt);
+                    CalculatedAt: payload.CalculatedAt);
             }
             catch (Exception ex) when (
             ex is HttpRequestException or
-            JsonException or 
-            TaskCanceledException && !ct.IsCancellationRequested)
+                  JsonException or
+                 TaskCanceledException && !ct.IsCancellationRequested)
             {
-                _logger.LogError("Failed To Retrive TDEE From fitness-Profile Service.");
+                _logger.LogError(ex, "Failed To Retrieve TDEE From fitness-Profile Service.");
                 return new FitnessProfileTdeeDto(
                     FitnessProfileTdeeStatus.ServiceUnavailable,
                     Tdee: null,
                     ErrorMessage: "Unable To reach Fitness-Profile Service.");
             }
         }
-        private sealed record TdeeResponseDto(decimal? tdee , DateTime ? CalculatedAt);
+        private sealed record TdeeResponseDto(decimal? tdee, DateTime? CalculatedAt);
     }
 
 }

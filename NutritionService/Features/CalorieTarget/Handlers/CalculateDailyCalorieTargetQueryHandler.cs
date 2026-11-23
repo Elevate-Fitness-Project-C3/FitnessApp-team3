@@ -12,7 +12,6 @@ namespace NutritionService.Features.CalorieTarget.Handlers
         private readonly CalorieTargetOptions _options;
         public CalculateDailyCalorieTargetQueryHandler(IOptions<CalorieTargetOptions> options)
             => _options = options.Value;
-        //private static readonly CalorieTargetOptions _options = new();
 
         public Task<DailyCalorieTargetDto> Handle(CalculateDailyCalorieTargetQuery request, CancellationToken ct)
         {
@@ -21,9 +20,9 @@ namespace NutritionService.Features.CalorieTarget.Handlers
             var plannedAdjustment = goal switch
             {
                 NutritionGoal.LoseWeight =>
-                Math.Abs(_options.GradualLossDeficit),
+                   -Math.Abs(_options.GradualLossDeficit),
                 NutritionGoal.GainMuscle =>
-                Math.Abs(_options.GradualGainSurplus),
+                    Math.Abs(_options.GradualGainSurplus),
                 NutritionGoal.MaintainWeight => 0m,
                 _ => 0m
             };
