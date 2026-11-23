@@ -224,6 +224,9 @@ namespace ProgressService.Migrations
                     b.HasIndex("SessionId")
                         .IsUnique();
 
+                    b.HasIndex("UserId", "CompletedAtUtc", "Id")
+                        .IsDescending(false, true, true);
+
                     b.ToTable("CompletedWorkoutRecords", (string)null);
                 });
 
