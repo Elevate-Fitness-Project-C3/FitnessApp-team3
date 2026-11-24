@@ -64,13 +64,10 @@ services:
     ports:
       - "127.0.0.1:5041:8080"
 
-  paymentservice:
-    <<: *development
-    environment:
-      <<: *api-environment
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessPayment;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
-    ports:
-      - "127.0.0.1:5035:8080"
+  # paymentservice:
+  #   <<: *development
+  #   ports:
+  #     - "127.0.0.1:5035:8080"
 
   sqlserver:
     environment:
