@@ -1,12 +1,9 @@
 ﻿using FluentValidation;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NutritionService.Comman.Behaviors;
 using NutritionService.Data;
 using NutritionService.Domain.Repositories;
-using NutritionService.Features.CalorieTarget.DTOs;
 using NutritionService.Features.CalorieTarget.Handlers;
-using NutritionService.Features.CalorieTarget.Queries;
 using NutritionService.Options;
 using NutritionService.Services.FitnessProfile;
 using System.Reflection;
@@ -34,14 +31,21 @@ namespace NutritionService
             service.AddTransient<BearerTokenForwardingHandler>();
             service.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            service.AddHttpClient<IRequestHandler<GetUserTdeeQuery, FitnessProfileTdeeDto>, GetUserTdeeQueryHandler>(client =>
-            {
-                var baseUrl = config["Services:FitnessProfileBaseUrl"]
-                  ?? "http://localhost:5007";
-                client.BaseAddress = new Uri(baseUrl);
-                client.Timeout = TimeSpan.FromSeconds(5);
-            })
-            .AddHttpMessageHandler<BearerTokenForwardingHandler>();
+            service.AddHttpClient(
+             GetUserTdeeQueryHandler.ClientName,
+             client =>
+             {
+                 var baseUrl = config["Services:FitnessProfileBaseUrl"];
+                 if (string.IsNullOrWhiteSpace(
+                     baseUrl))
+                    {
+                     baseUrl = "http://localhost:5007/";
+                 }
+
+                 client.BaseAddress = new Uri(baseUrl);
+                 client.Timeout =
+                     TimeSpan.FromSeconds(5);
+             }).AddHttpMessageHandler<BearerTokenForwardingHandler>();
 
             return service;
         }

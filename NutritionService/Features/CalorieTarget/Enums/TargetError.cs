@@ -4,6 +4,7 @@
     {
         GoalNotSet,
         ProfileIncomplete,
+        TdeeOutdated,
         ServiceUnavailable
     }
 }

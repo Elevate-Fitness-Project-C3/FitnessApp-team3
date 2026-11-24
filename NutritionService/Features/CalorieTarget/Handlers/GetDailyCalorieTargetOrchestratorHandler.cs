@@ -23,17 +23,29 @@ namespace NutritionService.Features.CalorieTarget.Handlers
                     TargetError.GoalNotSet,
                     "Nutrition goal has not been set for this user.");
             }
+
             var tdeeResult =await _mediator.Send(new GetUserTdeeQuery(request.UserId), ct);
             if(tdeeResult.Status == FitnessProfileTdeeStatus.ProfileIncomplete)
                 return Result<DailyCalorieTargetDto, TargetError>.Failure(
                 TargetError.ProfileIncomplete,
                 tdeeResult.ErrorMessage ?? "User fitness profile is incomplete.");
+
             if(tdeeResult.Status == FitnessProfileTdeeStatus.ServiceUnavailable || tdeeResult.Tdee is null)
                 return Result<DailyCalorieTargetDto, TargetError>.Failure(
                 TargetError.ServiceUnavailable,
                 tdeeResult.ErrorMessage ?? "Fitness profile service is currently unavailable.");
+
             var calorieTargetDto = await _mediator.Send(
             new CalculateDailyCalorieTargetQuery(prefResult.Value.NutritionGoal.Value, tdeeResult),ct);
+
+            if (calorieTargetDto.IsOutdated)
+            {
+                return Result<DailyCalorieTargetDto, TargetError>
+                    .Failure(
+                        TargetError.TdeeOutdated,
+                        "Your TDEE estimate is outdated. " +
+                        "Please update your fitness profile.");
+            }
             return Result<DailyCalorieTargetDto, TargetError>.Success(calorieTargetDto);
         }
     }

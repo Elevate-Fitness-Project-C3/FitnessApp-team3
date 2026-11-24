@@ -18,7 +18,7 @@ namespace NutritionService.EndPoints
 
             group.MapGet("/", async (
                 string? search,
-                MealType mealtype,
+                MealType? mealtype,
                 IMediator mediator,
                 CancellationToken ct) =>
             {
@@ -27,7 +27,7 @@ namespace NutritionService.EndPoints
                  ? Results.Ok(result.Value
                      .Select(m => m.ToViewModel()))
                  : result.Error.ToHttpError();
-            }); //.RequireAuthorization();
+            }); 
 
             group.MapGet("/{mealId:guid}", async (
             Guid mealId,
@@ -39,7 +39,7 @@ namespace NutritionService.EndPoints
                 return result.IsSuccess
                     ? Results.Ok(result.Value.ToViewModel())
                     : result.Error.ToHttpError();
-            });  //.RequireAuthorization();
+            });
 
             group.MapPost("/", async ([FromBody] CreateMealViewModel vm, IMediator mediator, CancellationToken ct) =>
             {
@@ -49,7 +49,7 @@ namespace NutritionService.EndPoints
                     vm.Calories,
                     vm.ProteinGrams), ct);
                 return result.IsSuccess ? Results.Created() : result.Error.ToHttpError();
-            }); //.RequireAuthorization(p=>p.RequireRole("Admin"));
+            }).RequireAuthorization(p=>p.RequireRole("Admin"));
             group.MapPut("/{mealId:guid}", async (
                 Guid mealId,
                 [FromBody] UpdateMealViewModel vm,
@@ -66,7 +66,7 @@ namespace NutritionService.EndPoints
                 return result.IsSuccess
                 ? Results.NoContent()
                 : result.Error.ToHttpError();
-            }); //.RequireAuthorization(p=>p.RequireRole("Admin"));
+            }).RequireAuthorization(p=>p.RequireRole("Admin"));
             group.MapPatch("/{mealId:guid}/deactivate", async (
                     Guid mealId,
                     IMediator mediator,
@@ -77,7 +77,7 @@ namespace NutritionService.EndPoints
                 return result.IsSuccess
                     ? Results.NoContent()
                     : result.Error.ToHttpError();
-            }); //.RequireAuthorization(p=>p.RequireRole("Admin"));
+            }).RequireAuthorization(p=>p.RequireRole("Admin"));
             return app;
         }
     }
