@@ -11,6 +11,7 @@ using FitnessProfileService.Infrastructure.Persistence;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using FitnessProfileService.Features.Fitness__OnBoarding___Assessment.View_and_update_fitness_profile.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +57,7 @@ app.UseAuthorization();
 // Map Minimal API Endpoints
 app.MapCompleteOnboardingEndpoint();
 app.MapUpdateTrainingPreferencesEndpoint();
+app.MapViewFintnessProfile();
 
 // 4. Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())
