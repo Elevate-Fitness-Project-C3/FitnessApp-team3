@@ -1,0 +1,13 @@
+namespace TrainingService.Infrastructure.DataAccess;
+
+public interface IUnitOfWork : IDisposable
+{
+    Task BeginTransactionAsync();
+    Task CommitTransactionAsync();
+    Task RollbackTransactionAsync();
+    Task<int> SaveChangesAsync();
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    Task ExecuteAsync(
+        Func<Task> action,
+        CancellationToken cancellationToken = default);
+}
