@@ -1,5 +1,6 @@
 ﻿using ProgressService.Domains.Entities;
 using MassTransit;
+using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
 
 namespace ProgressService.Infrastructure.Persistence
@@ -16,8 +17,18 @@ namespace ProgressService.Infrastructure.Persistence
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.AddInboxStateEntity();
-            modelBuilder.AddOutboxMessageEntity();
-            modelBuilder.AddOutboxStateEntity();
+            // Match the existing outbox migration when using MassTransit 8.
+            modelBuilder.AddOutboxMessageEntity(outbox =>
+            {
+                outbox.Metadata.RemoveIndex([outbox.Property(message => message.EnqueueTime).Metadata]);
+                outbox.Metadata.RemoveIndex([outbox.Property(message => message.ExpirationTime).Metadata]);
+            });
+            modelBuilder.AddOutboxStateEntity(outbox =>
+            {
+                outbox.Metadata.RemoveIndex([outbox.Property(state => state.Created).Metadata]);
+                outbox.Property<string>("BusName").HasMaxLength(256);
+                outbox.HasIndex("BusName", nameof(OutboxState.Created));
+            });
 
             modelBuilder.Entity< CompletedWorkoutRecord > (entity =>
             {

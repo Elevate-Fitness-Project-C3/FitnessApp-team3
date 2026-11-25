@@ -150,6 +150,17 @@ namespace IdentityService.Migrations
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("RotatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("SessionRootTokenId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SessionVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -160,6 +171,8 @@ namespace IdentityService.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SessionRootTokenId");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();
@@ -182,6 +195,11 @@ namespace IdentityService.Migrations
 
             modelBuilder.Entity("IdentityService.Domain.Entities.Identity.RefreshToken", b =>
                 {
+                    b.HasOne("IdentityService.Domain.Entities.Identity.RefreshToken", null)
+                        .WithMany()
+                        .HasForeignKey("SessionRootTokenId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("IdentityService.Domain.Entities.Identity.ApplicationUser", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")

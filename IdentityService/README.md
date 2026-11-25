@@ -25,8 +25,8 @@ MediatR dispatch and cached repository access follow
 the reference. Other operations retain the DTO, event, and view model folders
 present in that reference. Empty folders contain `.gitkeep` files.
 
-Registration, email verification, resend, and password login with token issuance are implemented.
-Password reset, refresh rotation, and logout are separate features.
+Registration, email verification, resend, password login, refresh rotation, and logout are implemented.
+Password reset is a separate feature.
 
 ## API startup
 
@@ -107,7 +107,7 @@ The initial migration creates the three tables from the identity diagram.
 | --- | --- | --- |
 | `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt`, `IsEnabled`, `FailedLoginAttempts`, `LockoutEnd`, `RowVersion` |
 | `OtpCode` | `OtpId` | `UserId`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
-| `RefreshToken` | `TokenId` | `UserId`, `TokenHash`, `ExpiresAt`, `RevokedAt` |
+| `RefreshToken` | `TokenId` | `UserId`, `SessionRootTokenId`, `SessionVersion`, `TokenHash`, `ExpiresAt`, `RotatedAt`, `RevokedAt` |
 
 The entities inherit the repository's integer `Id` property, which EF maps to the
 diagram's primary-key column names. A user has many OTP codes and refresh tokens.
@@ -331,6 +331,26 @@ the principal name is the user ID from `sub`. Validation works while IdentitySer
 The defaults are `FitnessApp.Identity` for issuer, `FitnessApp.Api` for audience, and
 `fitness-1` for key ID. Set `JwtSettings:AccessLifetimeMinutes` (default 15) and
 `JwtSettings:RefreshLifetimeDays` (default 7) on IdentityService.
+
+### Refresh or end the current session
+
+Apply the `AddRefreshSessions` migration before deploying these endpoints. Existing
+tokens keep their expiry and revocation state. Each starts its own session using its
+original token ID, and replacements refer back to that ID. Schema rollback drops
+the session links and rotation timestamps. Used tokens stay revoked.
+
+- `POST /api/identity/refresh` takes the `refresh_token` cookie over HTTPS. It works
+  after the access JWT expires. A successful call returns a fresh `data.accessToken`
+  and replaces the cookie. The replacement keeps the original session deadline.
+  Missing, invalid, expired, revoked, and used tokens receive the same `401`.
+- `POST /api/identity/logout` revokes the session identified by the cookie, clears
+  the cookie, and returns `204`. Other sessions stay signed in. Previously issued
+  access JWTs remain valid until their own expiration.
+
+Reusing a rotated token revokes the active refresh token in that session and records
+a warning with the user ID and session ID. Keep one refresh request in flight per
+session. If refresh returns `401`, prompt for sign-in.
+
 
 ## Verification
 

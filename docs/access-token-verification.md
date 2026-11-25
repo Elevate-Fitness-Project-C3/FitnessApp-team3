@@ -25,8 +25,10 @@ with the matching public key.
 
 IdentityService also sends an opaque `refresh_token` cookie scoped to
 `/api/identity`. The cookie is `Secure` and `HttpOnly`, and the database stores
-its hash. Send the access JWT in API requests. Refresh rotation is part of
-SCRUM-15. For now, sign in again when the access token expires.
+its hash. Send the access JWT in API requests. When it expires, send the cookie
+to `POST /api/identity/refresh` to receive a fresh JWT and a replacement cookie.
+Send the latest cookie to `POST /api/identity/logout` to revoke the refresh session.
+Access JWTs already issued remain valid until their expiration.
 
 [Shared validator](../FitnessApp.Authentication/AccessTokenAuthentication.cs) ·
 [Training API example](../TrainingService/Program.cs)
@@ -34,13 +36,13 @@ SCRUM-15. For now, sign in again when the access token expires.
 ## Configure the keys for Docker Compose
 
 Run commands from the repository root. If you are setting up a fresh checkout,
-copy `.env.example` to `.env` and fill in your local SQL Server, RabbitMQ, SMTP,
+copy `.env.example` to `.env.local` and fill in your local SQL Server, RabbitMQ, SMTP,
 and OTP settings. Generate a separate key pair for each independent development
 environment. Reuse the existing pair if your environment already has one.
-Keep the private PEM in the Git-ignored `.env` or IdentityService's runtime
+Keep the private PEM in the Git-ignored `.env.local` or IdentityService's runtime
 secret store. Share the public PEM with the consuming APIs.
 
-| Setting in `.env` | Purpose |
+| Setting in `.env.local` | Purpose |
 | --- | --- |
 | `JWT_PRIVATE_KEY_PEM` | RSA private key used only by IdentityService |
 | `JWT_PUBLIC_KEY_PEM` | Matching RSA public key used by the APIs |
@@ -53,12 +55,12 @@ fills the two empty entries from the template. Run it once for a fresh
 environment. It stops if either key entry already has a value.
 
 ```powershell
-$envFile = (Resolve-Path .env).Path
+$envFile = (Resolve-Path .env.local).Path
 $settings = [IO.File]::ReadAllText($envFile)
 $privateEntry = [regex]'(?m)^JWT_PRIVATE_KEY_PEM=[ \t]*(?=\r?$)'
 $publicEntry = [regex]'(?m)^JWT_PUBLIC_KEY_PEM=[ \t]*(?=\r?$)'
 if ($privateEntry.Matches($settings).Count -ne 1 -or $publicEntry.Matches($settings).Count -ne 1) {
-    throw 'Expected one empty private PEM entry and one empty public PEM entry in .env.'
+    throw 'Expected one empty private PEM entry and one empty public PEM entry in .env.local.'
 }
 
 $privatePem = @(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -quiet)
@@ -69,13 +71,13 @@ $settings = $privateEntry.Replace($settings, "JWT_PRIVATE_KEY_PEM='$($privatePem
 $settings = $publicEntry.Replace($settings, "JWT_PUBLIC_KEY_PEM='$($publicPem -join "`n")'")
 [IO.File]::WriteAllText($envFile, $settings)
 
-docker compose --env-file .env config --quiet
-if ($LASTEXITCODE -ne 0) { throw 'Docker Compose could not load .env.' }
-docker compose up --build -d
+docker compose --env-file .env.local config --quiet
+if ($LASTEXITCODE -ne 0) { throw 'Docker Compose could not load .env.local.' }
+docker compose --env-file .env.local up --build -d
 ```
 
 To configure an existing pair manually, put each complete PEM in the matching
-`.env` entry with single quotes around the multiline value. Keep the opening
+`.env.local` entry with single quotes around the multiline value. Keep the opening
 and closing PEM lines. Compose sends the private PEM only to IdentityService.
 Use the same issuer, audience, and key ID across the stack. For SMTP and OTP
 configuration, see [IdentityService setup](../IdentityService/README.md#gmail-setup).
@@ -84,7 +86,7 @@ Apply the IdentityService EF migrations to `FitnessIdentity` before testing
 login. Compose creates the database and EF creates or upgrades its schema.
 When running EF on the host against Docker SQL Server, set
 `ConnectionStrings__DefaultConnection` to the connection for
-`localhost,1433` and `Database=FitnessIdentity`. An old schema can produce a
+`localhost,11433` and `Database=FitnessIdentity`. An old schema can produce a
 `500` with missing login columns such as `RowVersion`. [Migration command and
 connection setup](../IdentityService/README.md#configure-persistence)
 

@@ -1,3 +1,4 @@
+using FitnessApp.Authentication;
 using Microsoft.EntityFrameworkCore;
 using NutritionService;
 using NutritionService.Data;

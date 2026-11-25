@@ -18,14 +18,7 @@ public class LoginController : ICarterModule
             await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await sender.Send(new LoginCommand(request.Email, request.Password), cancellationToken);
             response.Headers.CacheControl = "no-store";
-            response.Cookies.Append("refresh_token", result.RefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Lax,
-                Path = "/api/identity",
-                Expires = result.RefreshExpiresAt
-            });
+            RefreshTokenCookie.Write(response, result.RefreshToken, result.RefreshExpiresAt);
             return Results.Ok(RequestResponse<LoginResponseDto>.Ok(result.Response));
         })
         .AllowAnonymous()
