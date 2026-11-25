@@ -58,6 +58,7 @@ app.UseAuthorization();
 app.MapCompleteOnboardingEndpoint();
 app.MapUpdateTrainingPreferencesEndpoint();
 app.MapViewFintnessProfile();
+app.MapUpdateBodyMeasurement();
 
 // 4. Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())
