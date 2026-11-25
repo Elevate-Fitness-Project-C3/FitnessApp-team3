@@ -5,8 +5,10 @@ using IdentityService.Domain.Repositories;
 using IdentityService.Domain.Services;
 using IdentityService.Features.Identity.Register.Commands;
 using IdentityService.Features.Identity.Register.DTOs;
+using IdentityService.Features.Identity.Register.Events;
 using IdentityService.Features.Identity.Register.Queries;
 using IdentityService.Infrastructure.Persistence;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 
@@ -15,7 +17,8 @@ namespace IdentityService.Features.Identity.Register.Orchestrators;
 public class RegisterUserOrchestrator(
     IValidator<RegisterUserCommand> validator,
     ISender sender,
-    IUnitOfWork unitOfWork) : IRequestHandler<RegisterUserCommand, RegisterResponseDto>
+    IUnitOfWork unitOfWork,
+    IPublishEndpoint publishEndpoint) : IRequestHandler<RegisterUserCommand, RegisterResponseDto>
 {
     public const string DuplicateEmailMessage =
         "An account already uses this email. Sign in if verified, or request another verification code.";
@@ -36,6 +39,7 @@ public class RegisterUserOrchestrator(
                 var user = await sender.Send(new CreateUserCommand(command.Name, command.Email, command.Password), cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
                 verification = await sender.Send(new CreateEmailVerificationOtpCommand(user.Id), cancellationToken);
+                await publishEndpoint.Publish(new UserCreated(user.Id), cancellationToken);
             }, cancellationToken);
         }
         catch (DbUpdateException exception) when (SqlServerExceptionHelper.IsNormalizedEmailConflict(exception))

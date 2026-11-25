@@ -10,6 +10,11 @@ services:
     build:
       context: .
       dockerfile: IdentityService/Dockerfile
+    depends_on: &event-dependencies
+      database-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   fitnessprofileservice:
     <<: *api
@@ -24,11 +29,7 @@ services:
     build:
       context: .
       dockerfile: TrainingService/Dockerfile
-    depends_on: &event-dependencies
-      database-init:
-        condition: service_completed_successfully
-      rabbitmq:
-        condition: service_healthy
+    depends_on: *event-dependencies
 
   progressservice:
     <<: *api

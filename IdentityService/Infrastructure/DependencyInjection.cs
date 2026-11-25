@@ -16,6 +16,7 @@ using IdentityService.Infrastructure.Repositories;
 using IdentityService.Infrastructure.Services;
 using IdentityService.Infrastructure.Settings;
 using MailKit.Net.Smtp;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,6 +66,30 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(configureOptions);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        return services;
+    }
+
+    public static IServiceCollection AddIdentityMessaging(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        var rabbitMq = configuration.GetRequiredSection("RabbitMq");
+        services.AddMassTransit(bus =>
+        {
+            bus.AddEntityFrameworkOutbox<AppDbContext>(outbox =>
+            {
+                outbox.UseSqlServer();
+                outbox.UseBusOutbox();
+            });
+
+            bus.UsingRabbitMq((_, cfg) =>
+            {
+                cfg.Host(rabbitMq["Host"], rabbitMq.GetValue<ushort>("Port"), rabbitMq["VirtualHost"], host =>
+                {
+                    host.Username(rabbitMq["Username"]!);
+                    host.Password(rabbitMq["Password"]!);
+                });
+            });
+        });
         return services;
     }
 }

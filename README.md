@@ -49,16 +49,13 @@ Each API receives `ConnectionStrings__DefaultConnection` pointing to its own
 database on the local SQL Server instance. The initializer waits for SQL Server
 to become healthy and creates missing databases without dropping existing data.
 It also prepares the Payment database. APIs wait for initialization to
-finish; Training and Progress additionally wait for RabbitMQ readiness.
+finish. Identity, Training, and Progress also wait for RabbitMQ readiness.
 
-Training and Progress receive `RabbitMq__Host`, `RabbitMq__Username`, and
-`RabbitMq__Password` for the completed-workout event flow. These are configuration
-keys for the future messaging integrations; the scaffolds do not yet
-publish/consume events. Identity registers the SQL Server EF provider and includes
-an initial migration for users, OTP codes, and refresh tokens. Apply that migration
-as described in [IdentityService/README.md](IdentityService/README.md). Other APIs
-still have no schema migrations. The database initializer creates databases only;
-starting the stack does not apply application migrations.
+Identity, Training, and Progress receive `RabbitMq__Host`, `RabbitMq__Username`,
+and `RabbitMq__Password`. Identity publishes `UserCreated` via a SQL outbox.
+Apply the Identity schema migrations as described in
+[IdentityService/README.md](IdentityService/README.md). The database initializer
+creates databases. Identity migrations are applied separately.
 
 SQL Server and RabbitMQ data use named volumes and survive `docker compose down`.
 The local stack uses the SQL Server `sa` account; use restricted service accounts

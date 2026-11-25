@@ -129,10 +129,10 @@ apply the migration from the repository root:
 dotnet ef database update --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj
 ```
 
-For Docker's SQL Server, the host connection uses `localhost,1433`, rather than
-the Compose-only hostname `sqlserver`. Set the connection string through user
-secrets or the environment before running the command. Migrations are applied
-explicitly; starting the API does not change the database schema.
+For Docker's SQL Server, the host connection uses `localhost,11433`. Set the
+connection string through user secrets or the environment before running the
+command. Migrations are applied explicitly; starting the API does not change the
+database schema.
 
 Apply this change in a maintenance window: stop the old service, take a backup,
 apply pending migrations, configure SMTP, OTP, and JWT settings, and start the new service.
@@ -220,9 +220,21 @@ challenge ID and purpose is persisted; plaintext exists only in request memory
 and the outgoing email. The later verification flow must enforce expiration,
 `IsUsed`, and the configured five-attempt limit.
 
-Account and challenge commit together before the email command calls MailKit.
-There is no FitnessProfile creation/call, authentication token response, event
-publication, RabbitMQ dependency, or durable email queue in this flow.
+Account, challenge, and the `UserCreated` event commit together before the email
+command calls MailKit. The SQL outbox retries publishing to RabbitMQ if the broker
+is unavailable. The event represents account creation, including accounts whose
+verification email fails to send.
+
+Apply the `AddUserCreatedOutbox` migration using the database update command above.
+The event is published to the `user-created` exchange with the MassTransit message
+type `urn:message:IdentityService.Features.Identity.Register.Events:UserCreated`.
+The message payload is `{"userId": 123}`, using the integer `ApplicationUser` ID.
+Consumers must bind a queue before events are published and handle redelivery.
+
+Docker Compose supplies the broker credentials. If IdentityService runs outside
+Docker against the Compose broker, set `RabbitMq__Port` to `5673` and supply
+`RabbitMq__Username` and `RabbitMq__Password` from your local Compose environment.
+The default `RabbitMq__Host` is `localhost` and `RabbitMq__VirtualHost` is `/`.
 
 | Outcome | HTTP and envelope status |
 | --- | --- |
