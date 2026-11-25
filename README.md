@@ -9,10 +9,10 @@ for SQL Server alone), RabbitMQ, and the .NET services.
 From the repository root:
 
 ```powershell
-Copy-Item .env.example .env
-# Configure database, RabbitMQ, SMTP, OTP, and JWT values in .env.
-docker compose up --build -d
-docker compose ps -a
+Copy-Item .env.example .env.local
+# Configure database, RabbitMQ, SMTP, OTP, and JWT values in .env.local.
+docker compose --env-file .env.local up --build -d
+docker compose --env-file .env.local ps -a
 ```
 
 The default stack starts all six APIs, including Payment, SQL Server, RabbitMQ,
@@ -26,9 +26,9 @@ and a one-time database initializer.
 | Progress | http://localhost:5043 | FitnessProgress |
 | Nutrition | http://localhost:5041 | FitnessNutrition |
 | Payment | http://localhost:5035 | FitnessPayment |
-| SQL Server | localhost,1433 | Login: sa; password from .env |
-| RabbitMQ AMQP | localhost:5672 | Credentials from .env |
-| RabbitMQ management | http://localhost:15672 | Credentials from .env |
+| SQL Server | localhost,11433 | Login: sa; password from .env.local |
+| RabbitMQ AMQP | localhost:5673 | Credentials from .env.local |
+| RabbitMQ management | http://localhost:15673 | Credentials from .env.local |
 
 `docker-compose.override.yml` is loaded automatically for local development. It
 contains all service environment settings, enables Development, and publishes
@@ -62,20 +62,20 @@ starting the stack does not apply application migrations.
 
 SQL Server and RabbitMQ data use named volumes and survive `docker compose down`.
 The local stack uses the SQL Server `sa` account; use restricted service accounts
-and managed credentials for a deployed environment. Changing passwords in `.env`
+and managed credentials for a deployed environment. Changing passwords in `.env.local`
 does not rotate credentials already stored in existing data volumes.
 
 ## Useful commands
 
 ```powershell
-docker compose config --quiet
-docker compose logs -f identityservice
-docker compose logs database-init
-docker compose down
+docker compose --env-file .env.local config --quiet
+docker compose --env-file .env.local logs -f identityservice
+docker compose --env-file .env.local logs database-init
+docker compose --env-file .env.local down
 ```
 
 The last command stops all services and preserves stored data.
-In Visual Studio, copy/edit `.env` first, then select Docker Compose as the startup
+In Visual Studio, configure `.env.local` first, then select Docker Compose as the startup
 project. All six APIs are configured for debugging, including Payment.
 
 The base Compose file defines builds, dependencies, storage, and health checks.

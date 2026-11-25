@@ -1,4 +1,5 @@
 @IdentityService_HostAddress = https://localhost:7220
+@RefreshToken = paste-cookie-value-here
 
 ### Login after verifying the email address
 # @name login
@@ -13,6 +14,15 @@ Content-Type: application/json
 ### Use the access token in Fitness Profile
 GET https://localhost:7276/weatherforecast
 Authorization: Bearer {{login.response.body.$.data.accessToken}}
+
+### Refresh using the refresh_token value from the latest Set-Cookie header
+# @name refresh
+POST {{IdentityService_HostAddress}}/api/identity/refresh
+Cookie: refresh_token={{RefreshToken}}
+
+### Update RefreshToken with the replacement cookie before logging out
+POST {{IdentityService_HostAddress}}/api/identity/logout
+Cookie: refresh_token={{RefreshToken}}
 
 ### Register; use an address you control for an actual email.
 POST {{IdentityService_HostAddress}}/api/identity/register
