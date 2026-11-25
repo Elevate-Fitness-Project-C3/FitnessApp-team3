@@ -1,4 +1,5 @@
 using IdentityService.Domain.Entities.Identity;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Infrastructure.Persistence;
@@ -13,5 +14,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        modelBuilder.AddTransactionalOutboxEntities();
     }
 }

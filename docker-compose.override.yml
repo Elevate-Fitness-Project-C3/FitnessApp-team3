@@ -13,6 +13,9 @@ services:
     environment:
       <<: *api-environment
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessIdentity;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-fitness}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}
       SmtpSettings__Port: ${SMTP_PORT:-587}
       SmtpSettings__Security: ${SMTP_SECURITY:-StartTls}
