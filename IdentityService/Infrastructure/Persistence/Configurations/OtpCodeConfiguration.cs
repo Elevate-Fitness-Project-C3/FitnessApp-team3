@@ -11,6 +11,7 @@ public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
         builder.ToTable("OtpCode");
         builder.HasKey(otp => otp.Id);
         builder.Property(otp => otp.Id).HasColumnName("OtpId");
+        builder.Property(otp => otp.Sequence).UseIdentityColumn();
         builder.Property(otp => otp.CodeHash).HasMaxLength(64).IsRequired();
         builder.Property(otp => otp.Purpose).HasMaxLength(32).IsRequired();
         builder.HasIndex(otp => otp.ChallengeId).IsUnique();

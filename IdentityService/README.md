@@ -9,7 +9,7 @@ MediatR dispatch and cached repository access follow
 
 - `Common/Middleware`: global exception middleware and shared exceptions.
 - `Common/Results`: `Result` and `Result<T>`.
-- `Domain/Common`: `BaseEntity` with an integer `Id`, matching the LMS contract.
+- `Domain/Common`: `BaseEntity` with a GUID `Id`.
 - `Domain/Entities/Identity`: `ApplicationUser`, `OtpCode`, and `RefreshToken` entities.
 - `Domain/Repositories`: `IGeneralRepository<T>` and `IUnitOfWork`.
 - `Features/Identity`: ForgotPassword, Login, Logout, RefreshTokens, Register,
@@ -25,8 +25,7 @@ MediatR dispatch and cached repository access follow
 the reference. Other operations retain the DTO, event, and view model folders
 present in that reference. Empty folders contain `.gitkeep` files.
 
-Registration, email verification, resend, password login, refresh rotation, and logout are implemented.
-Password reset is a separate feature.
+Registration, email verification, resend, password login, password reset, refresh rotation, and logout are implemented.
 
 ## API startup
 
@@ -106,11 +105,12 @@ The initial migration creates the three tables from the identity diagram.
 | Table | Primary key | Other columns |
 | --- | --- | --- |
 | `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt`, `IsEnabled`, `FailedLoginAttempts`, `LockoutEnd`, `RowVersion` |
-| `OtpCode` | `OtpId` | `UserId`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
+| `OtpCode` | `OtpId` | `UserId`, `Sequence`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
 | `RefreshToken` | `TokenId` | `UserId`, `SessionRootTokenId`, `SessionVersion`, `TokenHash`, `ExpiresAt`, `RotatedAt`, `RevokedAt` |
 
-The entities inherit the repository's integer `Id` property, which EF maps to the
-diagram's primary-key column names. A user has many OTP codes and refresh tokens.
+The entities inherit the repository's GUID `Id` property, which EF maps to the
+primary-key column names. OTPs use a database-generated sequence to identify the
+latest challenge. A user has many OTP codes and refresh tokens.
 Both child tables have required, indexed foreign keys; deleting a user cascades
 to its codes and tokens. Normalized emails, challenge identifiers, and refresh-token
 hashes have unique indexes. `RevokedAt` is nullable. `Name` is nullable for legacy
@@ -123,7 +123,7 @@ and are discovered by `AppDbContext`. The generic repositories can operate on al
 three entities.
 
 With the .NET 10 `dotnet-ef` tool installed and the target connection configured,
-apply the migration from the repository root:
+create a fresh database or update a database that already uses GUIDs:
 
 ```powershell
 dotnet ef database update --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj
@@ -133,6 +133,23 @@ For Docker's SQL Server, the host connection uses `localhost,11433`. Set the
 connection string through user secrets or the environment before running the
 command. Migrations are applied explicitly; starting the API does not change the
 database schema.
+
+### Upgrade an existing database with integer IDs
+
+Stop Identity Service and back up the database, then run this command from the
+repository root. Use the environment that identifies your target database.
+
+```powershell
+dotnet run --project IdentityService/IdentityService.csproj --no-launch-profile -- --upgrade-identity-ids --environment Development
+```
+
+The upgrade stages the new keys, maps existing accounts, challenges, and refresh
+sessions through EF Core, updates pending `UserCreated` messages, and applies the
+final schema. If it stops during the transition, retry the same command before
+starting the service. Restore the pre-upgrade backup to roll back. Clients can
+refresh their sessions or sign in to obtain access tokens with GUID subjects.
+
+### Earlier registration migrations
 
 Apply this change in a maintenance window: stop the old service, take a backup,
 apply pending migrations, configure SMTP, OTP, and JWT settings, and start the new service.
@@ -185,8 +202,9 @@ var status = await emailSender.SendAsync(
     cancellationToken);
 ```
 
-Feature handlers own their email content; the sender only handles SMTP delivery.
-Registration builds its verification email in `SendVerificationEmailHandler`.
+Feature handlers supply the email content. Use the overload with an HTML body
+to send HTML alongside a plain-text alternative. Registration, verification
+resend, and password reset share the layout in `OtpEmailTemplate`.
 `EmailDeliveryStatus.Accepted` means SMTP accepted the message. `Rejected`,
 `Unavailable`, and `Unknown` describe delivery failures; request cancellation
 propagates. The existing `AddIdentityRegistration` setup registers the sender.
@@ -196,7 +214,7 @@ propagates. The existing `AddIdentityRegistration` setup registers the sender.
 `POST /api/identity/register` accepts only name, email, and password as registration
 inputs. See `IdentityService.http` for requests. Name is trimmed and limited to
 1–100 characters; email is trimmed, syntax-checked, and limited to 256 characters.
-Passwords must contain 15–128 characters and are preserved exactly, including spaces.
+Passwords must contain 8–128 characters and are preserved exactly, including spaces.
 These limits are implementation policy where SCRUM-12 is silent.
 
 The endpoint injects MediatR `ISender` and sends `RegisterUserCommand`.
@@ -228,7 +246,8 @@ verification email fails to send.
 Apply the `AddUserCreatedOutbox` migration using the database update command above.
 The event is published to the `user-created` exchange with the MassTransit message
 type `urn:message:IdentityService.Features.Identity.Register.Events:UserCreated`.
-The message payload is `{"userId": 123}`, using the integer `ApplicationUser` ID.
+The message payload uses the GUID `ApplicationUser` ID, for example
+`{"userId": "53f2912e-0351-44f0-939f-d0884644d383"}`.
 Consumers must bind a queue before events are published and handle redelivery.
 
 Docker Compose supplies the broker credentials. If IdentityService runs outside
@@ -363,6 +382,27 @@ Reusing a rotated token revokes the active refresh token in that session and rec
 a warning with the user ID and session ID. Keep one refresh request in flight per
 session. If refresh returns `401`, prompt for sign-in.
 
+
+## Password reset
+
+`POST /api/identity/password-reset/request` accepts `email` and returns the same
+`202 Accepted` response for all valid addresses when the local queue has room.
+The background worker sends a six-digit code to eligible accounts using the configured
+SMTP provider. After a one-minute cooldown, a new request replaces any active
+reset code or token for that account. Pending requests in the in-memory queue
+are lost if the service restarts.
+
+`POST /api/identity/password-reset/verify` accepts `email` and `otp` as a
+six-digit string from the email. The code expires after ten minutes and locks
+after the configured OTP attempt limit. Verification consumes the code and
+returns `data.resetToken` and `data.expiresAt`.
+
+`POST /api/identity/password-reset/complete` takes `Authorization: Bearer <resetToken>`
+and a JSON body containing `newPassword`. The token expires after five minutes and identifies the account
+that passed OTP verification. A successful reset returns `204 No Content`,
+consumes the token, clears the login lockout, and revokes all refresh sessions
+in one database transaction. Issued access tokens expire on their normal
+schedule. See `IdentityService.http` for examples.
 
 ## Verification
 

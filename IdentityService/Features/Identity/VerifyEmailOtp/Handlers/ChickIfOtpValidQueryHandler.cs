@@ -23,7 +23,7 @@ namespace IdentityService.Features.Identity.VerifyEmailOtp.Handlers
             var challenge = await unitOfWork.GetRepository<OtpCode>().GetAll()
                 .AsNoTracking()
                 .Where(otp => otp.UserId == request.UserId && otp.Purpose == OtpCode.EmailVerificationPurpose)
-                .OrderByDescending(otp => otp.Id)
+                .OrderByDescending(otp => otp.Sequence)
                 .Take(1)
                 .FirstOrDefaultAsync(otp => otp.ExpiresAt > now, cancellationToken);
             if (challenge is null || challenge.IsUsed

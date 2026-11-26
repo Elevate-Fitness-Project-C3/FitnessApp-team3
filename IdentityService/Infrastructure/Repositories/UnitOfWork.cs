@@ -1,3 +1,4 @@
+using System.Data;
 using IdentityService.Domain.Common;
 using IdentityService.Domain.Repositories;
 using IdentityService.Infrastructure.Persistence;
@@ -43,7 +44,8 @@ public class UnitOfWork(AppDbContext context, ILogger<UnitOfWork> logger) : IUni
         }
     }
 
-    public async Task ExecuteAsync(Func<Task> action, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(Func<Task> action, CancellationToken cancellationToken = default,
+        IsolationLevel isolationLevel = IsolationLevel.Unspecified)
     {
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfFailed();
@@ -58,7 +60,7 @@ public class UnitOfWork(AppDbContext context, ILogger<UnitOfWork> logger) : IUni
             CommitMayHaveSucceeded = false;
             try
             {
-                _transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+                _transaction = await context.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
             }
             catch
             {

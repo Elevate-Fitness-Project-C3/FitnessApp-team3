@@ -1,9 +1,9 @@
-﻿using MediatR;
+using MediatR;
 
 namespace IdentityService.Features.Identity.VerifyEmailOtp.Commands
 {
-    public record RevokeAllUnusedOtpsCommand(int userId) : IRequest<bool>
+    public record RevokeAllUnusedOtpsCommand(Guid userId) : IRequest<bool>
     {
-        public int UserId { get; } = userId;
+        public Guid UserId { get; } = userId;
     }
 }

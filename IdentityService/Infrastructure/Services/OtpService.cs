@@ -9,9 +9,10 @@ namespace IdentityService.Infrastructure.Services;
 
 public class OtpService(IOptions<OtpSettings> options) : IOtpService
 {
-    public string GenerateCode()
+    public string GenerateCode() => GenerateCode(options.Value.Length);
+
+    public string GenerateCode(int length)
     {
-        var length = options.Value.Length;
         var maximum = (int)Math.Pow(10, length);
         return RandomNumberGenerator.GetInt32(maximum).ToString($"D{length}", CultureInfo.InvariantCulture);
     }

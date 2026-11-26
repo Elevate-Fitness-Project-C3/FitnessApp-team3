@@ -1,4 +1,3 @@
-using System.Globalization;
 using IdentityService.Features.Identity.Login.Commands;
 using IdentityService.Infrastructure.Settings;
 using MediatR;
@@ -22,7 +21,7 @@ public class CreateAccessTokenCommandHandler(JwtSettings settings, SigningCreden
             SigningCredentials = credentials,
             Claims = new Dictionary<string, object>
             {
-                ["sub"] = command.UserId.ToString(CultureInfo.InvariantCulture),
+                ["sub"] = command.UserId.ToString("D"),
                 ["role"] = command.Role,
                 ["jti"] = Guid.NewGuid().ToString("N")
             }

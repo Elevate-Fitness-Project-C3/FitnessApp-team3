@@ -7,7 +7,7 @@ namespace IdentityService.Common.Identity;
 
 internal static class RefreshTokenValue
 {
-    public static (string Token, RefreshToken Record) Create(int userId, DateTimeOffset expiresAt, int? sessionRootTokenId = null)
+    public static (string Token, RefreshToken Record) Create(Guid userId, DateTimeOffset expiresAt, Guid? sessionRootTokenId = null)
     {
         var token = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(32));
         return (token, new RefreshToken

@@ -24,7 +24,7 @@ public class RecordFailedEmailOtpAttemptCommandHandler(
 
             await userOtps.Where(otp => otp.Id == request.OtpId && !otp.IsUsed
                     && otp.ExpiresAt > now && otp.FailedAttempts < maxFailedAttempts
-                    && !userOtps.Any(newerOtp => newerOtp.Id > otp.Id))
+                    && !userOtps.Any(newerOtp => newerOtp.Sequence > otp.Sequence))
                 .ExecuteUpdateAsync(setters => setters.SetProperty(otp => otp.FailedAttempts, otp => otp.FailedAttempts + 1),
                     cancellationToken);
         }, cancellationToken);

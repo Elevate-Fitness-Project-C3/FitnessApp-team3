@@ -5,8 +5,11 @@ namespace IdentityService.Domain.Entities.Identity;
 public class OtpCode : BaseEntity
 {
     public const string EmailVerificationPurpose = "EmailVerification";
+    public const string PasswordResetPurpose = "PasswordReset";
+    public const string PasswordResetTokenPurpose = "PasswordResetToken";
 
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
+    public int Sequence { get; private set; }
     public Guid ChallengeId { get; set; }
     public required string CodeHash { get; set; }
     public string Purpose { get; set; } = EmailVerificationPurpose;
