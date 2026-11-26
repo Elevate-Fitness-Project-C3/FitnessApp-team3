@@ -1,6 +1,8 @@
 
-using FitnessProfileService.Common.Middleware;
 using FitnessProfileService.Common.Behaviors;
+using FitnessProfileService.Common.Middleware;
+using FitnessProfileService.Features.Fitness__OnBoarding___Assessment.review_body_measurements.EndPoints;
+using FitnessProfileService.Features.Fitness__OnBoarding___Assessment.View_and_update_fitness_profile.Endpoints;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Endpoints;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Handlers;
 using FitnessProfileService.Features.OnBoarding.CompeleteOnBoarding.Orchestrators;
@@ -11,7 +13,6 @@ using FitnessProfileService.Infrastructure.Persistence;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using FitnessProfileService.Features.Fitness__OnBoarding___Assessment.View_and_update_fitness_profile.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,7 @@ app.MapCompleteOnboardingEndpoint();
 app.MapUpdateTrainingPreferencesEndpoint();
 app.MapViewFintnessProfile();
 app.MapUpdateBodyMeasurement();
+app.MapBodyMeasurements();
 
 // 4. Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())
