@@ -12,7 +12,7 @@ public class GeneralRepository<T>(AppDbContext context) : IGeneralRepository<T> 
     public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Set<T>().ToListAsync(cancellationToken);
 
-    public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await context.Set<T>().FindAsync([id], cancellationToken);
 
     public void Add(T entity) => context.Set<T>().Add(entity);

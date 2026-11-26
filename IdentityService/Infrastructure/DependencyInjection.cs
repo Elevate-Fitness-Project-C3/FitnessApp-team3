@@ -3,6 +3,9 @@ using FluentValidation;
 using IdentityService.Features.Identity.Login.DTOs;
 using IdentityService.Features.Identity.Login.Queries;
 using IdentityService.Features.Identity.Login.Validators;
+using IdentityService.Features.Identity.ForgotPassword.Commands;
+using IdentityService.Features.Identity.ForgotPassword.Services;
+using IdentityService.Features.Identity.ForgotPassword.Validators;
 using Microsoft.IdentityModel.Tokens;
 using IdentityService.Domain.Entities.Identity;
 using IdentityService.Domain.Services;
@@ -53,8 +56,13 @@ public static class DependencyInjection
         services.AddTransient<ISmtpClient, SmtpClient>();
         services.AddScoped<IEmailSender, MailKitEmailSender>();
         services.AddScoped<IValidator<RegisterUserCommand>, RegisterUserCommandValidator>();
+        services.AddScoped<IValidator<RequestPasswordResetCommand>, RequestPasswordResetCommandValidator>();
+        services.AddScoped<IValidator<VerifyPasswordResetCommand>, VerifyPasswordResetCommandValidator>();
+        services.AddScoped<IValidator<CompletePasswordResetCommand>, CompletePasswordResetCommandValidator>();
         services.AddScoped<IValidator<VerifyEmailOtpVM>, VerifyEmailOtpVMValidator>();
         services.AddScoped<IValidator<ResendEmailVerifycationOtpVM>, ResendEmailVerifycationOtpVMValidator>();
+        services.AddSingleton<PasswordResetQueue>();
+        services.AddHostedService<PasswordResetWorker>();
         services.AddMediatR(configuration =>
             configuration.RegisterServicesFromAssemblyContaining<RegisterUserOrchestrator>());
         return services;

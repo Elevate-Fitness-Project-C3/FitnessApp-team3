@@ -1,11 +1,11 @@
-﻿using MediatR;
+using MediatR;
 
 namespace IdentityService.Features.Identity.VerifyEmailOtp.Queries
 {
     public record ChickIfOtpValidQuery(
-        int UserId,
+        Guid UserId,
         string Otp
     ):IRequest<EmailOtpValidationResult>;
 
-    public readonly record struct EmailOtpValidationResult(bool IsValid, int? FailedOtpId);
+    public readonly record struct EmailOtpValidationResult(bool IsValid, Guid? FailedOtpId);
 }

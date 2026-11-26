@@ -1,5 +1,7 @@
+using System.Data;
 using IdentityService.Common.Identity;
 using IdentityService.Domain.Repositories;
+using IdentityService.Features.Identity.Accounts.Queries;
 using IdentityService.Features.Identity.Login.Commands;
 using IdentityService.Features.Identity.RefreshTokens.Commands;
 using IdentityService.Features.Identity.RefreshTokens.DTOs;
@@ -28,6 +30,8 @@ public class RefreshTokenOrchestrator(
         var reused = false;
         await unitOfWork.ExecuteAsync(async () =>
         {
+            // Keep the account read lock through rotation so a password reset waits for the replacement.
+            var user = await sender.Send(new GetIdentityAccountQuery(presented.UserId), cancellationToken);
             if (!await sender.Send(new LockRefreshSessionCommand(presented.SessionId), cancellationToken))
                 return;
 
@@ -46,7 +50,6 @@ public class RefreshTokenOrchestrator(
             if (current.RevokedAt is not null || current.ExpiresAt <= now)
                 return;
 
-            var user = await sender.Send(new GetRefreshAccountQuery(current.UserId), cancellationToken);
             if (user is null || !user.IsEnabled || !user.IsEmailVerified)
                 return;
 
@@ -56,7 +59,7 @@ public class RefreshTokenOrchestrator(
 
             var accessToken = await sender.Send(new CreateAccessTokenCommand(user.Id, user.Role, now), cancellationToken);
             result = new RefreshTokenResult(accessToken, replacement, current.ExpiresAt);
-        }, cancellationToken);
+        }, cancellationToken, IsolationLevel.RepeatableRead);
 
         if (reused)
             logger.LogWarning("Refresh token reuse detected for user {UserId}, session {SessionId}.",

@@ -1,5 +1,6 @@
 @IdentityService_HostAddress = https://localhost:7220
 @RefreshToken = paste-cookie-value-here
+@PasswordResetOtp = paste-six-digit-code-from-email-here
 
 ### Login after verifying the email address
 # @name login
@@ -9,6 +10,33 @@ Content-Type: application/json
 {
   "email": "new.user@example.com",
   "password": "Example-only long password 42!"
+}
+
+### Request a password reset for an address you control
+POST {{IdentityService_HostAddress}}/api/identity/password-reset/request
+Content-Type: application/json
+
+{
+  "email": "new.user@example.com"
+}
+
+### Verify the six-digit code from the email
+# @name verifyPasswordReset
+POST {{IdentityService_HostAddress}}/api/identity/password-reset/verify
+Content-Type: application/json
+
+{
+  "email": "new.user@example.com",
+  "otp": "{{PasswordResetOtp}}"
+}
+
+### Complete the reset using the token returned by verification
+POST {{IdentityService_HostAddress}}/api/identity/password-reset/complete
+Authorization: Bearer {{verifyPasswordReset.response.body.$.data.resetToken}}
+Content-Type: application/json
+
+{
+  "newPassword": "Example-only new password 43!"
 }
 
 ### Use the access token in Fitness Profile
