@@ -33,7 +33,6 @@
 
 	<ItemGroup>
 		<Folder Include="Features\OnBoarding\CompeleteOnBoarding\Mappings\" />
-		<Folder Include="Features\Fitness  OnBoarding &amp; Assessment\CompeleteOnBoarding\Mappings\" />
 		<Folder Include="Features\Fitness  OnBoarding &amp; Assessment\View and update fitness profile\Commands\" />
 		<Folder Include="Features\Fitness  OnBoarding &amp; Assessment\View and update fitness profile\Validators\" />
 	</ItemGroup>
