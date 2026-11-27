@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace TrainingService.Features.TrainingPrograms.AssignWorkoutToProgram {
+namespace TrainingService.Features.ProgramWorkouts.AssignWorkoutToProgram {
     public class AssignWorkoutToProgramValidator  : AbstractValidator <AssignWorkoutToProgramOrchestrator> {
 
         public AssignWorkoutToProgramValidator() {

@@ -2,22 +2,22 @@
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Domain.Entities;
 using TrainingService.Dtos.Shared;
+using TrainingService.Features.ProgramWorkouts.CheckIfProgramWorkoutSlotExists;
+using TrainingService.Features.ProgramWorkouts.CreateWorkoutProgram;
 using TrainingService.Features.TrainingPrograms.CheckTrainingProgramIsExist;
 using TrainingService.Features.Workouts.CheckWorkoutIsExist;
 using TrainingService.Infrastructure.DataAccess;
 
-namespace TrainingService.Features.TrainingPrograms.AssignWorkoutToProgram {
+namespace TrainingService.Features.ProgramWorkouts.AssignWorkoutToProgram {
     public class AssignWorkoutToProgramOrchestratorHandler : IRequestHandler<AssignWorkoutToProgramOrchestrator, RequestResponse<Guid>> {
 
         private readonly IMediator mediator;
         private readonly IUnitOfWork unitOfWork;
-        private readonly IGenericRepository<ProgramWorkout> programWorkoutRepository;
 
 
         public AssignWorkoutToProgramOrchestratorHandler(IUnitOfWork unitOfWork, IMediator mediator, IGenericRepository<ProgramWorkout> programWorkoutRepository) {
             this.unitOfWork = unitOfWork;
             this.mediator = mediator;
-            this.programWorkoutRepository = programWorkoutRepository;
         }
 
         public async Task<RequestResponse<Guid>> Handle(AssignWorkoutToProgramOrchestrator request, CancellationToken cancellationToken) {
@@ -64,39 +64,31 @@ namespace TrainingService.Features.TrainingPrograms.AssignWorkoutToProgram {
                 };
             }
             // 5. Validate duplicate slot
-            var slotExists = await programWorkoutRepository
-                .GetAll()
-                .AnyAsync(x =>
-                    x.TrainingProgramId == request.RequestDto.TrainingProgramId &&
-                    x.WeekNumber == request.RequestDto.WeekNumber &&
-                    x.DayNumber == request.RequestDto.DayNumber,
-                    cancellationToken);
+            var slotExists = await mediator.Send(
+                new CheckIfProgramWorkoutSlotExistsQuery(
+                    request.RequestDto.TrainingProgramId,
+                    request.RequestDto.WeekNumber,
+                    request.RequestDto.DayNumber),cancellationToken);
 
-            if (slotExists)
+            if (!slotExists.Success) {
+                return new RequestResponse<Guid> {
+                    Success = false,
+                    StatusCode = slotExists.StatusCode,
+                    Message = slotExists.Message
+                };
+            }
+
+            if (slotExists.Data) {
                 return new RequestResponse<Guid> {
                     Success = false,
                     StatusCode = 409,
-                    Message = "A workout is already assigned to this slot."
+                    Message = "This slot is already occupied."
                 };
-            // 6. Create assignment
-            var programWorkout = new ProgramWorkout {
-                TrainingProgramId = request.RequestDto.TrainingProgramId,
-                WorkoutId = request.RequestDto.WorkoutId,
-                WeekNumber = request.RequestDto.WeekNumber,
-                DayNumber = request.RequestDto.DayNumber
-            };
+            }
 
-            // 7. Persist assignment
-            await programWorkoutRepository.AddAsync(programWorkout);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return new RequestResponse<Guid> {
-                Data = programWorkout.Id,
-                StatusCode = 201,
-                Success = true,
-                Message = "Workout assigned to training program successfully."
-            };
+            // 6. Assign Workout
+            return await mediator.Send(
+                new CreateWorkoutProgramCommand(request.RequestDto),cancellationToken);
         }
     }
 }

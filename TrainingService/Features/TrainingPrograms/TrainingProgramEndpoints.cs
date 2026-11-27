@@ -1,9 +1,7 @@
 ﻿using MediatR;
-using TrainingService.Dtos.Exercises;
 using TrainingService.Dtos.Shared;
 using TrainingService.Dtos.TrainingPrograms;
-using TrainingService.Features.Exercises.GetExercises;
-using TrainingService.Features.TrainingPrograms.AssignWorkoutToProgram;
+using TrainingService.Features.ProgramWorkouts.AssignWorkoutToProgram;
 using TrainingService.Features.TrainingPrograms.CreateTrainingProgram;
 using TrainingService.Features.TrainingPrograms.GetTrainingProgramById;
 using TrainingService.Features.TrainingPrograms.GetTrainingPrograms;
