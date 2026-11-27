@@ -63,19 +63,7 @@ public static class TrainingProgramEndpoints {
         }).WithName("GetTrainingProgramById");
 
 
-        group.MapPost("/{programId:guid}/workouts", async (Guid programId, AssignWorkoutToProgramVM viewModel, ISender sender, CancellationToken cancellationToken) => {
-            var dto = viewModel.ToDto(programId);
-
-            var command = new AssignWorkoutToProgramOrchestrator(dto);
-
-            var result = await sender.Send(command, cancellationToken);
-
-            var response = EndpointResponse<Guid>.FromResult(result);
-
-            return Results.Json(response, statusCode: result.StatusCode);
-        })
-                        .WithName("AssignWorkoutToProgram");
-
+    
 
         return app;
     }

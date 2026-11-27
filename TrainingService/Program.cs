@@ -40,6 +40,7 @@ if (!EF.IsDesignTime)
 app.MapExerciseEndpoints();
 app.MapWorkoutEndpoints();
 app.MapTrainingProgramEndpoints();
+app.MapProgramWorkoutEndpoints();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
