@@ -3,12 +3,9 @@ using TrainingService.Dtos.TrainingPrograms;
 
 namespace TrainingService.ViewModels.TrainingProgram;
 
-public static class TrainingProgramVMMapper
-{
-    public static CreateTrainingProgramDto ToDto(this CreateTrainingProgramVM viewModel)
-    {
-        return new CreateTrainingProgramDto
-        {
+public static class TrainingProgramVMMapper{
+    public static CreateTrainingProgramDto ToDto(this CreateTrainingProgramVM viewModel){
+        return new CreateTrainingProgramDto{
             Title = viewModel.Title,
             Description = viewModel.Description,
             Status = viewModel.Status,
@@ -20,19 +17,15 @@ public static class TrainingProgramVMMapper
         };
     }
 
-    public static GetTrainingProgramRequestDto ToDto(this GetTrainingProgramRequestVM viewModel)
-    {
-        return new GetTrainingProgramRequestDto
-        {
+    public static GetTrainingProgramRequestDto ToDto(this GetTrainingProgramRequestVM viewModel){
+        return new GetTrainingProgramRequestDto{
             PageIndex = viewModel.PageIndex ?? 1,
             PageSize = viewModel.PageSize ?? 10
         };
     }
 
-    public static GetTrainingProgramVM ToViewModel(this GetTrainingProgramDto dto)
-    {
-        return new GetTrainingProgramVM
-        {
+    public static GetTrainingProgramVM ToViewModel(this GetTrainingProgramDto dto){
+        return new GetTrainingProgramVM{
             Id = dto.Id,
             Title = dto.Title,
             Description = dto.Description,
@@ -42,6 +35,16 @@ public static class TrainingProgramVMMapper
             DurationWeeks = dto.DurationWeeks,
             DaysPerWeek = dto.DaysPerWeek,
             AccessType = dto.AccessType
+        };
+    }
+
+    public static AssignWorkoutToProgramDto ToDto(this AssignWorkoutToProgramVM viewModel,Guid programId) {
+
+        return new AssignWorkoutToProgramDto {
+            TrainingProgramId = programId,
+            WorkoutId = viewModel.WorkoutId,
+            WeekNumber = viewModel.WeekNumber,
+            DayNumber = viewModel.DayNumber
         };
     }
 }
