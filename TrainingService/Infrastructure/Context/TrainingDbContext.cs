@@ -12,6 +12,14 @@ namespace TrainingService.Infrastructure.Context
         }
 
         public DbSet<Exercise> Exercises => Set<Exercise>();
+        public DbSet<Workout> Workouts=> Set<Workout>();
+
+        public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
+
+        public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
+
+        public DbSet<ProgramWorkout> ProgramWorkouts => Set<ProgramWorkout>();
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

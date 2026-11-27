@@ -1,10 +1,8 @@
 ﻿using TrainingService.Domain.Common;
 
-namespace TrainingService.Domain.Entities
-{
+namespace TrainingService.Domain.Entities{
 
-    public class ProgramWorkout : BaseEntity
-    {
+    public class ProgramWorkout : BaseEntity{
         public Guid TrainingProgramId { get; set; }
         public TrainingProgram TrainingProgram { get; set; } = null!;
 

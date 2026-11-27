@@ -5,6 +5,7 @@ using TrainingService.Infrastructure.Context;
 
 using FitnessApp.Authentication;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Features.TrainingPrograms;
 
 var builder = WebApplication.CreateBuilder(args);
 if (!EF.IsDesignTime)
@@ -29,6 +30,7 @@ if (!EF.IsDesignTime)
 //For Apis
 app.MapExerciseEndpoints();
 app.MapWorkoutEndpoints();
+app.MapTrainingProgramEndpoints();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
@@ -48,7 +50,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
