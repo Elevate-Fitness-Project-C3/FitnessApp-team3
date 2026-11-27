@@ -12,7 +12,8 @@ using ProgressService.Infrastructure.Persistence;
 using ProgressService.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddAccessTokenAuthentication(builder.Configuration);
+if (!EF.IsDesignTime)
+    builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

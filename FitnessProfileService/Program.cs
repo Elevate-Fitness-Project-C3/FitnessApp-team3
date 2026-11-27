@@ -13,7 +13,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddAccessTokenAuthentication(builder.Configuration);
+if (!EF.IsDesignTime)
+    builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // 1. Register Services
 builder.Services.AddOpenApi();
