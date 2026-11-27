@@ -1,5 +1,4 @@
 ﻿using NutritionService.Features.CalorieTarget.Enums;
-using NutritionService.Services.FitnessProfile;
 
 namespace NutritionService.Features.CalorieTarget.DTOs
 {
