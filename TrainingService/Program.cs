@@ -1,18 +1,48 @@
+using exam_system.Persistence;
+using TrainingService.Features.Exercises;
+using TrainingService.Features.Workouts;
+using TrainingService.Infrastructure.Context;
+
+using FitnessApp.Authentication;
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+builder.Services.AddPersistenceServices(
+    builder.Configuration);
+
 var app = builder.Build();
 
+
+//For Apis
+app.MapExerciseEndpoints();
+app.MapWorkoutEndpoints();
+
 // Configure the HTTP request pipeline.
+//if (app.Environment.IsDevelopment())
+//{
+//    app.MapOpenApi();
+//}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint(
+            "/openapi/v1.json",
+            "Training Service API");
+    });
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 var summaries = new[]
 {
@@ -31,7 +61,8 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.WithName("GetWeatherForecast");
+.WithName("GetWeatherForecast")
+.RequireAuthorization();
 
 app.Run();
 

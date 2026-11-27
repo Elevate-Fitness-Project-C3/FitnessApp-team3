@@ -1,5 +1,12 @@
 using IdentityService.Domain.Repositories;
 using FluentValidation;
+using IdentityService.Features.Identity.Login.DTOs;
+using IdentityService.Features.Identity.Login.Queries;
+using IdentityService.Features.Identity.Login.Validators;
+using IdentityService.Features.Identity.ForgotPassword.Commands;
+using IdentityService.Features.Identity.ForgotPassword.Services;
+using IdentityService.Features.Identity.ForgotPassword.Validators;
+using Microsoft.IdentityModel.Tokens;
 using IdentityService.Domain.Entities.Identity;
 using IdentityService.Domain.Services;
 using IdentityService.Features.Identity.Register.Commands;
@@ -12,6 +19,7 @@ using IdentityService.Infrastructure.Repositories;
 using IdentityService.Infrastructure.Services;
 using IdentityService.Infrastructure.Settings;
 using MailKit.Net.Smtp;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,13 +41,28 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
+        services.AddSingleton<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
+        services.AddSingleton<DummyLoginAccount>();
+        services.AddScoped<IValidator<LoginRequestDto>, LoginRequestDtoValidator>();
+        services.AddSingleton(_ => configuration.GetRequiredSection(JwtSettings.SectionName).Get<JwtSettings>()!);
+        services.AddSingleton(provider =>
+        {
+            var settings = provider.GetRequiredService<JwtSettings>();
+            using var rsa = settings.LoadSigningKey();
+            var key = new RsaSecurityKey(rsa.ExportParameters(true)) { KeyId = settings.KeyId };
+            return new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
+        });
         services.AddScoped<IOtpService, OtpService>();
         services.AddTransient<ISmtpClient, SmtpClient>();
         services.AddScoped<IEmailSender, MailKitEmailSender>();
         services.AddScoped<IValidator<RegisterUserCommand>, RegisterUserCommandValidator>();
+        services.AddScoped<IValidator<RequestPasswordResetCommand>, RequestPasswordResetCommandValidator>();
+        services.AddScoped<IValidator<VerifyPasswordResetCommand>, VerifyPasswordResetCommandValidator>();
+        services.AddScoped<IValidator<CompletePasswordResetCommand>, CompletePasswordResetCommandValidator>();
         services.AddScoped<IValidator<VerifyEmailOtpVM>, VerifyEmailOtpVMValidator>();
         services.AddScoped<IValidator<ResendEmailVerifycationOtpVM>, ResendEmailVerifycationOtpVMValidator>();
+        services.AddSingleton<PasswordResetQueue>();
+        services.AddHostedService<PasswordResetWorker>();
         services.AddMediatR(configuration =>
             configuration.RegisterServicesFromAssemblyContaining<RegisterUserOrchestrator>());
         return services;
@@ -51,6 +74,30 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(configureOptions);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        return services;
+    }
+
+    public static IServiceCollection AddIdentityMessaging(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        var rabbitMq = configuration.GetRequiredSection("RabbitMq");
+        services.AddMassTransit(bus =>
+        {
+            bus.AddEntityFrameworkOutbox<AppDbContext>(outbox =>
+            {
+                outbox.UseSqlServer();
+                outbox.UseBusOutbox();
+            });
+
+            bus.UsingRabbitMq((_, cfg) =>
+            {
+                cfg.Host(rabbitMq["Host"], rabbitMq.GetValue<ushort>("Port"), rabbitMq["VirtualHost"], host =>
+                {
+                    host.Username(rabbitMq["Username"]!);
+                    host.Password(rabbitMq["Password"]!);
+                });
+            });
+        });
         return services;
     }
 }

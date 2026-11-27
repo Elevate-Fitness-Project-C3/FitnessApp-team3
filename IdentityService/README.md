@@ -9,7 +9,7 @@ MediatR dispatch and cached repository access follow
 
 - `Common/Middleware`: global exception middleware and shared exceptions.
 - `Common/Results`: `Result` and `Result<T>`.
-- `Domain/Common`: `BaseEntity` with an integer `Id`, matching the LMS contract.
+- `Domain/Common`: `BaseEntity` with a GUID `Id`.
 - `Domain/Entities/Identity`: `ApplicationUser`, `OtpCode`, and `RefreshToken` entities.
 - `Domain/Repositories`: `IGeneralRepository<T>` and `IUnitOfWork`.
 - `Features/Identity`: ForgotPassword, Login, Logout, RefreshTokens, Register,
@@ -25,8 +25,7 @@ MediatR dispatch and cached repository access follow
 the reference. Other operations retain the DTO, event, and view model folders
 present in that reference. Empty folders contain `.gitkeep` files.
 
-Registration and verification-email initiation are implemented. Login, email
-verification/resend, password reset, logout, and token issuance remain scaffolds.
+Registration, email verification, resend, password login, password reset, refresh rotation, and logout are implemented.
 
 ## API startup
 
@@ -101,19 +100,20 @@ to use a different SQL Server instance. Production requires an explicit connecti
 string.
 
 The initial migration creates the three tables from the identity diagram.
-`AddUserRegistration` extends them with the registration fields:
+`AddUserRegistration` and `AddLoginProtection` extend them for registration and login.
 
 | Table | Primary key | Other columns |
 | --- | --- | --- |
-| `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt` |
-| `OtpCode` | `OtpId` | `UserId`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
-| `RefreshToken` | `TokenId` | `UserId`, `Token`, `ExpiresAt`, `RevokedAt` |
+| `ApplicationUser` | `UserId` | `Name`, `Email`, `NormalizedEmail`, `PasswordHash`, `Role`, `IsEmailVerified`, `CreatedAt`, `IsEnabled`, `FailedLoginAttempts`, `LockoutEnd`, `RowVersion` |
+| `OtpCode` | `OtpId` | `UserId`, `Sequence`, `ChallengeId`, `CodeHash`, `Purpose`, `CreatedAt`, `ExpiresAt`, `IsUsed`, `FailedAttempts` |
+| `RefreshToken` | `TokenId` | `UserId`, `SessionRootTokenId`, `SessionVersion`, `TokenHash`, `ExpiresAt`, `RotatedAt`, `RevokedAt` |
 
-The entities inherit the repository's integer `Id` property, which EF maps to the
-diagram's primary-key column names. A user has many OTP codes and refresh tokens.
+The entities inherit the repository's GUID `Id` property, which EF maps to the
+primary-key column names. OTPs use a database-generated sequence to identify the
+latest challenge. A user has many OTP codes and refresh tokens.
 Both child tables have required, indexed foreign keys; deleting a user cascades
 to its codes and tokens. Normalized emails, challenge identifiers, and refresh-token
-values have unique indexes. `RevokedAt` is nullable; `Name` is nullable for legacy
+hashes have unique indexes. `RevokedAt` is nullable. `Name` is nullable for legacy
 accounts whose names are unknown. Registration always requires a name.
 Timestamps use `DateTimeOffset` in UTC. `Role` remains a required string;
 registration always sets it to `User`.
@@ -123,19 +123,36 @@ and are discovered by `AppDbContext`. The generic repositories can operate on al
 three entities.
 
 With the .NET 10 `dotnet-ef` tool installed and the target connection configured,
-apply the migration from the repository root:
+create a fresh database or update a database that already uses GUIDs:
 
 ```powershell
 dotnet ef database update --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj
 ```
 
-For Docker's SQL Server, the host connection uses `localhost,1433`, rather than
-the Compose-only hostname `sqlserver`. Set the connection string through user
-secrets or the environment before running the command. Migrations are applied
-explicitly; starting the API does not change the database schema.
+For Docker's SQL Server, the host connection uses `localhost,11433`. Set the
+connection string through user secrets or the environment before running the
+command. Migrations are applied explicitly; starting the API does not change the
+database schema.
+
+### Upgrade an existing database with integer IDs
+
+Stop Identity Service and back up the database, then run this command from the
+repository root. Use the environment that identifies your target database.
+
+```powershell
+dotnet run --project IdentityService/IdentityService.csproj --no-launch-profile -- --upgrade-identity-ids --environment Development
+```
+
+The upgrade stages the new keys, maps existing accounts, challenges, and refresh
+sessions through EF Core, updates pending `UserCreated` messages, and applies the
+final schema. If it stops during the transition, retry the same command before
+starting the service. Restore the pre-upgrade backup to roll back. Clients can
+refresh their sessions or sign in to obtain access tokens with GUID subjects.
+
+### Earlier registration migrations
 
 Apply this change in a maintenance window: stop the old service, take a backup,
-apply both migrations, configure SMTP/OTP settings, and start the new service.
+apply pending migrations, configure SMTP, OTP, and JWT settings, and start the new service.
 The old and new OTP schemas are not compatible with a rolling deployment.
 The migration backfills ASCII legacy emails with the same trim/uppercase rules.
 It stops atomically for collisions or legacy emails requiring explicit Unicode
@@ -185,8 +202,9 @@ var status = await emailSender.SendAsync(
     cancellationToken);
 ```
 
-Feature handlers own their email content; the sender only handles SMTP delivery.
-Registration builds its verification email in `SendVerificationEmailHandler`.
+Feature handlers supply the email content. Use the overload with an HTML body
+to send HTML alongside a plain-text alternative. Registration, verification
+resend, and password reset share the layout in `OtpEmailTemplate`.
 `EmailDeliveryStatus.Accepted` means SMTP accepted the message. `Rejected`,
 `Unavailable`, and `Unknown` describe delivery failures; request cancellation
 propagates. The existing `AddIdentityRegistration` setup registers the sender.
@@ -196,7 +214,7 @@ propagates. The existing `AddIdentityRegistration` setup registers the sender.
 `POST /api/identity/register` accepts only name, email, and password as registration
 inputs. See `IdentityService.http` for requests. Name is trimmed and limited to
 1–100 characters; email is trimmed, syntax-checked, and limited to 256 characters.
-Passwords must contain 15–128 characters and are preserved exactly, including spaces.
+Passwords must contain 8–128 characters and are preserved exactly, including spaces.
 These limits are implementation policy where SCRUM-12 is silent.
 
 The endpoint injects MediatR `ISender` and sends `RegisterUserCommand`.
@@ -220,9 +238,22 @@ challenge ID and purpose is persisted; plaintext exists only in request memory
 and the outgoing email. The later verification flow must enforce expiration,
 `IsUsed`, and the configured five-attempt limit.
 
-Account and challenge commit together before the email command calls MailKit.
-There is no FitnessProfile creation/call, authentication token response, event
-publication, RabbitMQ dependency, or durable email queue in this flow.
+Account, challenge, and the `UserCreated` event commit together before the email
+command calls MailKit. The SQL outbox retries publishing to RabbitMQ if the broker
+is unavailable. The event represents account creation, including accounts whose
+verification email fails to send.
+
+Apply the `AddUserCreatedOutbox` migration using the database update command above.
+The event is published to the `user-created` exchange with the MassTransit message
+type `urn:message:IdentityService.Features.Identity.Register.Events:UserCreated`.
+The message payload uses the GUID `ApplicationUser` ID, for example
+`{"userId": "53f2912e-0351-44f0-939f-d0884644d383"}`.
+Consumers must bind a queue before events are published and handle redelivery.
+
+Docker Compose supplies the broker credentials. If IdentityService runs outside
+Docker against the Compose broker, set `RabbitMq__Port` to `5673` and supply
+`RabbitMq__Username` and `RabbitMq__Password` from your local Compose environment.
+The default `RabbitMq__Host` is `localhost` and `RabbitMq__VirtualHost` is `/`.
 
 | Outcome | HTTP and envelope status |
 | --- | --- |
@@ -249,9 +280,133 @@ public registration launches; it must generate a fresh code and invalidate previ
 challenges because persisted hashes cannot recover plaintext codes. Delivery is
 not guaranteed or exactly once.
 
+## Login and account protection
+
+`POST /api/identity/login` accepts email and password over HTTPS. A verified, enabled
+account receives a 200 envelope with `data.accessToken` and `Cache-Control: no-store`.
+The host-only `refresh_token` cookie uses `HttpOnly`, `Secure`, `SameSite=Lax`, and
+`Path=/api/identity`. Its expiry matches the stored expiry. This assumes a same-site client
+deployment. The database stores the SHA-256 hash of the opaque token.
+
+Unknown email, wrong password, and unverified, disabled, or locked accounts receive
+the same 401 response. The fifth wrong password locks an eligible account for
+15 minutes. Attempts during lockout preserve its deadline. A successful login clears
+the count. The endpoint also allows 20 requests per IP per minute per service instance.
+
+`LoginOrchestrator` dispatches MediatR queries to load the account and verify the
+password, then commands to update login attempts and issue tokens. A row-version
+conflict restarts the account query and password check. The successful account
+update and refresh-token insert commit in the same transaction.
+
+Apply `AddLoginProtection` before deploying the new service. It enables existing users,
+preserves their email-verification state, starts their failure count at zero, and adds
+a SQL Server row version. It hashes and revokes legacy refresh tokens. Rolling back also
+revokes existing sessions because their plaintext tokens cannot be recovered.
+
+### Configure signing and export the public PEM
+
+Configure a stable RSA private PEM (at least 2048 bits) in IdentityService's secret store
+under `JwtSettings:PrivateKeyPem`. Use the same key across IdentityService replicas
+and restarts. For a **new** local development installation, run this once from the
+repository root in PowerShell 7.4 or later. Skip key generation when a signer already exists.
+
+```powershell
+$rsa = [System.Security.Cryptography.RSA]::Create(3072)
+try {
+    @{ 'JwtSettings:PrivateKeyPem' = $rsa.ExportPkcs8PrivateKeyPem() } |
+        ConvertTo-Json -Compress | dotnet user-secrets set --project IdentityService
+} finally {
+    $rsa.Dispose()
+}
+```
+
+Export from the configured signer. The command creates a new PEM file and exits.
+Choose a fresh output filename for a later export.
+
+```powershell
+New-Item -ItemType Directory -Force artifacts | Out-Null
+$publicPath = Join-Path (Get-Location) 'artifacts/identity-public.pem'
+dotnet run --project IdentityService --launch-profile https -- --export-public-key $publicPath
+$publicPem = [IO.File]::ReadAllText($publicPath)
+foreach ($service in 'FitnessProfileService','NutritionService','PaymentService','ProgressService','TrainingService') {
+    @{ 'JwtSettings:PublicKeyPem' = $publicPem } | ConvertTo-Json -Compress |
+        dotnet user-secrets set --project "$service/$service.csproj"
+}
+```
+
+For Docker Compose, provide multiline `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM`
+in the deployment environment or the ignored local `.env`. Use single quotes around
+multiline values in `.env` to preserve the PEM boundaries and line breaks. Compose
+passes the private PEM exclusively to IdentityService. Supply matching `JWT_ISSUER`,
+`JWT_AUDIENCE`, and `JWT_KEY_ID` to all services when overriding their defaults.
+For local browser testing, trust the development certificate and run the HTTPS profile.
+Use HTTPS ingress when running the browser client against Compose.
+
+```powershell
+dotnet dev-certs https --trust
+dotnet ef database update --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj -- --environment Development
+dotnet run --project IdentityService --launch-profile https
+```
+
+### Use access tokens in the other APIs
+
+Send `Authorization: Bearer <accessToken>` with each protected request. Fitness Profile,
+Nutrition, Payment, Progress, and Training use the shared `AddAccessTokenAuthentication`
+registration and ASP.NET Core JWT bearer middleware. Their sample `/weatherforecast`
+endpoints require authentication. Each API checks the RS256 signature with its local
+public key, the configured issuer and audience, and expiry with zero clock skew.
+Keep clocks synchronized. Role policies use the stored account's `role` claim and
+the principal name is the user ID from `sub`. Validation works while IdentityService is offline.
+[ASP.NET Core JWT bearer documentation](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0)
+
+The defaults are `FitnessApp.Identity` for issuer, `FitnessApp.Api` for audience, and
+`fitness-1` for key ID. Set `JwtSettings:AccessLifetimeMinutes` (default 15) and
+`JwtSettings:RefreshLifetimeDays` (default 7) on IdentityService.
+
+### Refresh or end the current session
+
+Apply the `AddRefreshSessions` migration before deploying these endpoints. Existing
+tokens keep their expiry and revocation state. Each starts its own session using its
+original token ID, and replacements refer back to that ID. Schema rollback drops
+the session links and rotation timestamps. Used tokens stay revoked.
+
+- `POST /api/identity/refresh` takes the `refresh_token` cookie over HTTPS. It works
+  after the access JWT expires. A successful call returns a fresh `data.accessToken`
+  and replaces the cookie. The replacement keeps the original session deadline.
+  Missing, invalid, expired, revoked, and used tokens receive the same `401`.
+- `POST /api/identity/logout` revokes the session identified by the cookie, clears
+  the cookie, and returns `204`. Other sessions stay signed in. Previously issued
+  access JWTs remain valid until their own expiration.
+
+Reusing a rotated token revokes the active refresh token in that session and records
+a warning with the user ID and session ID. Keep one refresh request in flight per
+session. If refresh returns `401`, prompt for sign-in.
+
+
+## Password reset
+
+`POST /api/identity/password-reset/request` accepts `email` and returns the same
+`202 Accepted` response for all valid addresses when the local queue has room.
+The background worker sends a six-digit code to eligible accounts using the configured
+SMTP provider. After a one-minute cooldown, a new request replaces any active
+reset code or token for that account. Pending requests in the in-memory queue
+are lost if the service restarts.
+
+`POST /api/identity/password-reset/verify` accepts `email` and `otp` as a
+six-digit string from the email. The code expires after ten minutes and locks
+after the configured OTP attempt limit. Verification consumes the code and
+returns `data.resetToken` and `data.expiresAt`.
+
+`POST /api/identity/password-reset/complete` takes `Authorization: Bearer <resetToken>`
+and a JSON body containing `newPassword`. The token expires after five minutes and identifies the account
+that passed OTP verification. A successful reset returns `204 No Content`,
+consumes the token, clears the login lockout, and revokes all refresh sessions
+in one database transaction. Issued access tokens expire on their normal
+schedule. See `IdentityService.http` for examples.
+
 ## Verification
 
 ```powershell
-dotnet build IdentityService/IdentityService.csproj
+dotnet build FitnessApp-team3.slnx
 dotnet ef migrations has-pending-model-changes --project IdentityService/IdentityService.csproj --startup-project IdentityService/IdentityService.csproj
 ```

@@ -7,15 +7,15 @@ using MediatR;
 
 namespace IdentityService.Features.Identity.Register.Handlers;
 
-public class GetUserIdByEmailQueryHandler(IUnitOfWork unitOfWork) : IRequestHandler<GetUserIdByEmailQuery, int?>
+public class GetUserIdByEmailQueryHandler(IUnitOfWork unitOfWork) : IRequestHandler<GetUserIdByEmailQuery, Guid?>
 {
-    public Task<int?> Handle(GetUserIdByEmailQuery query, CancellationToken cancellationToken)
+    public Task<Guid?> Handle(GetUserIdByEmailQuery query, CancellationToken cancellationToken)
     {
         var normalizedEmail = EmailNormalizer.Normalize(query.email);
         var userRepository = unitOfWork.GetRepository<ApplicationUser>();
         return userRepository.GetAll()
             .Where(user => user.NormalizedEmail == normalizedEmail)
-            .Select(user => (int?)user.Id)
+            .Select(user => (Guid?)user.Id)
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

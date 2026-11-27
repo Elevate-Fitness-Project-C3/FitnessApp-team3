@@ -10,6 +10,11 @@ services:
     build:
       context: .
       dockerfile: IdentityService/Dockerfile
+    depends_on: &event-dependencies
+      database-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   fitnessprofileservice:
     <<: *api
@@ -24,11 +29,7 @@ services:
     build:
       context: .
       dockerfile: TrainingService/Dockerfile
-    depends_on: &event-dependencies
-      database-init:
-        condition: service_completed_successfully
-      rabbitmq:
-        condition: service_healthy
+    depends_on: *event-dependencies
 
   progressservice:
     <<: *api
@@ -45,12 +46,16 @@ services:
       context: .
       dockerfile: NutritionService/Dockerfile
 
-  paymentservice:
-    <<: *api
-    image: ${DOCKER_REGISTRY-}paymentservice
-    build:
-      context: .
-      dockerfile: PaymentService/Dockerfile
+  # paymentservice:
+  #   <<: *api
+  #   profiles: [payment]
+  #   image: ${DOCKER_REGISTRY-}paymentservice
+  #   build:
+  #     context: .
+  #     dockerfile: PaymentService/Dockerfile
+  #   environment:
+  #     <<: *api-environment
+  #     ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessPayment;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
 
   sqlserver:
 

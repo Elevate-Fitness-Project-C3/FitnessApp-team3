@@ -1,4 +1,5 @@
 
+using FitnessApp.Authentication;
 using FitnessProfileService.Common.Behaviors;
 using FitnessProfileService.Common.Middleware;
 using FitnessProfileService.Features.Fitness__OnBoarding___Assessment.review_body_measurements.EndPoints;
@@ -16,7 +17,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Register Services
+builder.Services.AddAccessTokenAuthentication(builder.Configuration);
+
+// Register Services
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
@@ -32,8 +35,6 @@ builder.Services.AddTransient(
     typeof(IPipelineBehavior<,>),
     typeof(ValidationBehavior<,>));
 
-
-
 // Register Persistence
 builder.Services.AddIdentityPersistence(options =>
 {
@@ -41,10 +42,10 @@ builder.Services.AddIdentityPersistence(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-// 2. Build Application
+// Build Application
 var app = builder.Build();
 
-// 3. Configure Middleware
+// Configure Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -53,6 +54,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Map Minimal API Endpoints
@@ -62,7 +64,7 @@ app.MapViewFintnessProfile();
 app.MapUpdateBodyMeasurement();
 app.MapBodyMeasurements();
 
-// 4. Apply EF Core Migrations
+// Apply EF Core Migrations
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider
@@ -71,5 +73,4 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 }
 
-// 5. Run Application
 app.Run();

@@ -3,7 +3,7 @@ using MediatR;
 
 namespace IdentityService.Features.Identity.Register.Commands;
 
-public class CreateEmailVerificationOtpCommand(int userId) : IRequest<GeneratedEmailVerificationOtp>
+public class CreateEmailVerificationOtpCommand(Guid userId) : IRequest<GeneratedEmailVerificationOtp>
 {
-    public int UserId { get; } = userId;
+    public Guid UserId { get; } = userId;
 }

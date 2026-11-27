@@ -24,7 +24,7 @@ public class MarkOtpAsUsedCommandHandler(
         var userOtps = unitOfWork.GetRepository<OtpCode>().GetAll()
             .Where(otp => otp.UserId == request.UserId && otp.Purpose == OtpCode.EmailVerificationPurpose);
         var eligibleOtps = userOtps.Where(otp => !otp.IsUsed && otp.FailedAttempts < maxFailedAttempts
-            && !userOtps.Any(newerOtp => newerOtp.Id > otp.Id));
+            && !userOtps.Any(newerOtp => newerOtp.Sequence > otp.Sequence));
 
         var challenge = await eligibleOtps.Where(otp => otp.ExpiresAt > now)
             .Select(otp => new { otp.Id, otp.CodeHash })

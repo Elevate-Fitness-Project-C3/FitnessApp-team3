@@ -2,6 +2,10 @@ x-development: &development
   environment: &api-environment
     ASPNETCORE_ENVIRONMENT: Development
     ASPNETCORE_HTTP_PORTS: "8080"
+    JwtSettings__Issuer: ${JWT_ISSUER:-FitnessApp.Identity}
+    JwtSettings__Audience: ${JWT_AUDIENCE:-FitnessApp.Api}
+    JwtSettings__KeyId: ${JWT_KEY_ID:-fitness-1}
+    JwtSettings__PublicKeyPem: ${JWT_PUBLIC_KEY_PEM:-}
 
 services:
   identityservice:
@@ -9,6 +13,9 @@ services:
     environment:
       <<: *api-environment
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessIdentity;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-fitness}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}
       SmtpSettings__Port: ${SMTP_PORT:-587}
       SmtpSettings__Security: ${SMTP_SECURITY:-StartTls}
@@ -17,6 +24,7 @@ services:
       SmtpSettings__Username: ${SMTP_USERNAME:-}
       SmtpSettings__Password: ${SMTP_PASSWORD:-}
       OtpSettings__ProtectionKey: ${OTP_PROTECTION_KEY:-}
+      JwtSettings__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:-}
     ports:
       - "127.0.0.1:5002:8080"
 
@@ -59,13 +67,10 @@ services:
     ports:
       - "127.0.0.1:5041:8080"
 
-  paymentservice:
-    <<: *development
-    environment:
-      <<: *api-environment
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=FitnessPayment;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True"
-    ports:
-      - "127.0.0.1:5035:8080"
+  # paymentservice:
+  #   <<: *development
+  #   ports:
+  #     - "127.0.0.1:5035:8080"
 
   sqlserver:
     environment:

@@ -1,4 +1,4 @@
-﻿using IdentityService.Domain.Repositories;
+using IdentityService.Domain.Repositories;
 using IdentityService.Features.Identity.Register.Queries;
 using IdentityService.Common.Middleware;
 using IdentityService.Features.Identity.VerifyEmailOtp.Commands;
@@ -28,7 +28,7 @@ namespace IdentityService.Features.Identity.VerifyEmailOtp.Orchestrators
                 var validation = await sender.Send(new ChickIfOtpValidQuery(userId.Value, request.Otp), cancellationToken);
                 if (!validation.IsValid)
                 {
-                    if (validation.FailedOtpId is int failedOtpId)
+                    if (validation.FailedOtpId is Guid failedOtpId)
                         await sender.Send(new RecordFailedEmailOtpAttemptCommand(userId.Value, failedOtpId), cancellationToken);
 
                     return;

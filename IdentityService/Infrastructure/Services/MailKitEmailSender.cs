@@ -11,8 +11,12 @@ namespace IdentityService.Infrastructure.Services;
 
 public class MailKitEmailSender(ISmtpClient client, IOptions<SmtpSettings> options) : IEmailSender
 {
-    public async Task<EmailDeliveryStatus> SendAsync(
+    public Task<EmailDeliveryStatus> SendAsync(
         string email, string subject, string body, CancellationToken cancellationToken = default)
+        => SendAsync(email, subject, body, htmlBody: null, cancellationToken);
+
+    public async Task<EmailDeliveryStatus> SendAsync(
+        string email, string subject, string body, string? htmlBody, CancellationToken cancellationToken)
     {
         var settings = options.Value;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -25,7 +29,7 @@ public class MailKitEmailSender(ISmtpClient client, IOptions<SmtpSettings> optio
             message.From.Add(new MailboxAddress(settings.SenderName, settings.SenderEmail));
             message.To.Add(new MailboxAddress(string.Empty, email));
             message.Subject = subject;
-            message.Body = new TextPart("plain") { Text = body };
+            message.Body = new BodyBuilder { TextBody = body, HtmlBody = htmlBody }.ToMessageBody();
 
             var security = settings.Security == "SslOnConnect"
                 ? SecureSocketOptions.SslOnConnect
