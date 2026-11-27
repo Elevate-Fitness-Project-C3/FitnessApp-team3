@@ -17,7 +17,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 builder.Services.AddAccessTokenAuthentication(builder.Configuration);
+
+
 
 // Register Services
 builder.Services.AddOpenApi();
