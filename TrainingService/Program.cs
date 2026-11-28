@@ -1,10 +1,12 @@
 using exam_system.Persistence;
-using TrainingService.Features.Exercises;
-using TrainingService.Features.Workouts;
-using TrainingService.Infrastructure.Context;
-
 using FitnessApp.Authentication;
 using Microsoft.EntityFrameworkCore;
+using TrainingService.Features.Exercises;
+using TrainingService.Features.TrainingPrograms;
+using TrainingService.Features.Workouts;
+using TrainingService.Infrastructure.Context;
+using TrainingService.Infrastructure.Exceptions;
+
 
 var builder = WebApplication.CreateBuilder(args);
 if (!EF.IsDesignTime)
@@ -17,7 +19,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddPersistenceServices(
     builder.Configuration);
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.AddProblemDetails();
+
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
+
 
 if (!EF.IsDesignTime)
 {
@@ -29,6 +39,8 @@ if (!EF.IsDesignTime)
 //For Apis
 app.MapExerciseEndpoints();
 app.MapWorkoutEndpoints();
+app.MapTrainingProgramEndpoints();
+app.MapProgramWorkoutEndpoints();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
@@ -48,7 +60,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
