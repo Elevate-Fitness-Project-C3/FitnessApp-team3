@@ -6,7 +6,7 @@ using TrainingService.Dtos.TrainingPrograms;
 using TrainingService.Infrastructure.DataAccess;
 
 namespace TrainingService.Features.TrainingPrograms.CheckTrainingProgramIsExist {
-    public class GetTrainingProgramDaysAndWeeksQueryHandler : IRequestHandler<GetTrainingProgramDaysAndWeeksQuery, RequestResponse<GetTrainingProgramDaysAndWeeks>> {
+    public class GetTrainingProgramDaysAndWeeksQueryHandler : IRequestHandler<GetTrainingProgramDaysAndWeeksQuery, RequestResponse<GetTrainingProgramDaysAndWeeksDto>> {
 
         private readonly IGenericRepository<TrainingProgram> trainingProgramRepository;
 
@@ -16,35 +16,36 @@ namespace TrainingService.Features.TrainingPrograms.CheckTrainingProgramIsExist 
 
 
 
-        public async Task<RequestResponse<GetTrainingProgramDaysAndWeeks>> Handle(GetTrainingProgramDaysAndWeeksQuery request, CancellationToken cancellationToken) {
+        public async Task<RequestResponse<GetTrainingProgramDaysAndWeeksDto>> Handle(GetTrainingProgramDaysAndWeeksQuery request, CancellationToken cancellationToken) {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
 
             if (request.TrainingProgramId == Guid.Empty)
-                return new RequestResponse<GetTrainingProgramDaysAndWeeks> {
+                return new RequestResponse<GetTrainingProgramDaysAndWeeksDto> {
                     Success = false,
                     StatusCode = 400,
                     Message = "Training program ID cannot be empty."
                 };
 
             var trianingProgram = await trainingProgramRepository.GetAll()
-                .FirstOrDefaultAsync(x => x.Id == request.TrainingProgramId&& !x.IsDeleted,cancellationToken);
+                .Where(x => x.Id == request.TrainingProgramId && !x.IsDeleted).Select(x => new GetTrainingProgramDaysAndWeeksDto {
+                    Id = x.Id , 
+                    Status = x.Status,
+                    DaysPerWeek = x.DaysPerWeek,
+                    DurationWeeks = x.DurationWeeks
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (trianingProgram == null)
-                return new RequestResponse<GetTrainingProgramDaysAndWeeks> {
+                return new RequestResponse<GetTrainingProgramDaysAndWeeksDto> {
                     Success = false,
                     StatusCode = 404,
                     Message = "Training program not found."
                 };
 
-
-            return new RequestResponse<GetTrainingProgramDaysAndWeeks> {
-                Data = new GetTrainingProgramDaysAndWeeks {
-                    Id = trianingProgram.Id,
-                    DurationWeeks = trianingProgram.DurationWeeks,
-                    DaysPerWeek = trianingProgram.DaysPerWeek
-                },
+            return new RequestResponse<GetTrainingProgramDaysAndWeeksDto> {
+                Data = trianingProgram,
                 StatusCode = 200,
                 Success = true,
                 Message = "Training Program retrieved successfully."

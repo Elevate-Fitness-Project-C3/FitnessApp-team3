@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TrainingService.Domain.Entities;
+using TrainingService.Domain.Enums;
 using TrainingService.Dtos.Shared;
 using TrainingService.Features.ProgramWorkouts.CheckIfProgramWorkoutSlotExists;
 using TrainingService.Features.ProgramWorkouts.CreateWorkoutProgram;
@@ -25,13 +26,20 @@ namespace TrainingService.Features.ProgramWorkouts.AssignWorkoutToProgram {
             // 1. Check training program
             var trainingProgram = await mediator.Send(new GetTrainingProgramDaysAndWeeksQuery(request.RequestDto.TrainingProgramId), cancellationToken);
 
-            if (!trainingProgram.Success || trainingProgram.Data == null) {
+            if (!trainingProgram.Success || trainingProgram.Data == null) 
                 return new RequestResponse<Guid> {
                     Success = false,
                     StatusCode = 404,
                     Message = "Training program not found."
                 };
-            }
+            
+
+            if (trainingProgram.Data.Status != TrainingProgramStatus.Draft)
+                return new RequestResponse<Guid> {
+                    Success = false,
+                    StatusCode = 409,
+                    Message = "Only draft programs can be modified."
+                };
 
             // 2. Check workout 
             var workout = await mediator.Send(new CheckWorkoutIsExistQuery(request.RequestDto.WorkoutId), cancellationToken);
