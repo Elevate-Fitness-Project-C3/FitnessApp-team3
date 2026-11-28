@@ -1,4 +1,5 @@
-﻿using FitnessProfileService.Domain.Repositories;
+﻿using FitnessProfileService.Common.Middleware;
+using FitnessProfileService.Domain.Repositories;
 using FitnessProfileService.Features.OnBoarding.Set_training_preferences.Commands;
 using FitnessProfileService.Features.OnBoarding.Set_training_preferences.Orchestrators;
 using FitnessProfileService.Features.OnBoarding.Set_training_preferences.Queries;
@@ -21,7 +22,9 @@ namespace FitnessProfileService.Features.OnBoarding.Set_training_preferences.Han
                 var profile = await mediator.Send(
                     new GetTrainingPreferencesQuery(request.UserId),
                     cancellationToken);
-
+                if (profile.IsOnboardingCompleted is false)
+                    throw new BadRequestException(
+                        "Complete fitness onboarding before updating training preferences.");
 
                 await mediator.Send(
                     new UpdateTrainingPreferencesCommand(
