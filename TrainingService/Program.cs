@@ -1,12 +1,16 @@
 using exam_system.Persistence;
+using FitnessApp.Authentication;
+using Microsoft.EntityFrameworkCore;
 using TrainingService.Features.Exercises;
+using TrainingService.Features.TrainingPrograms;
 using TrainingService.Features.Workouts;
 using TrainingService.Infrastructure.Context;
+using TrainingService.Infrastructure.Exceptions;
 
-using FitnessApp.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddAccessTokenAuthentication(builder.Configuration);
+if (!EF.IsDesignTime)
+    builder.Services.AddAccessTokenAuthentication(builder.Configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -15,12 +19,28 @@ builder.Services.AddOpenApi();
 builder.Services.AddPersistenceServices(
     builder.Configuration);
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.AddProblemDetails();
+
+
 var app = builder.Build();
 
+app.UseExceptionHandler();
+
+
+if (!EF.IsDesignTime)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TrainingDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 //For Apis
 app.MapExerciseEndpoints();
 app.MapWorkoutEndpoints();
+app.MapTrainingProgramEndpoints();
+app.MapProgramWorkoutEndpoints();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
@@ -40,7 +60,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 

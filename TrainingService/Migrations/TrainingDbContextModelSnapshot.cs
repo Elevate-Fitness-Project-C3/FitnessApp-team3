@@ -98,11 +98,17 @@ namespace TrainingService.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TrainingProgramId");
-
                     b.HasIndex("WorkoutId");
 
-                    b.ToTable("ProgramWorkout");
+                    b.HasIndex("TrainingProgramId", "WeekNumber", "DayNumber")
+                        .IsUnique();
+
+                    b.ToTable("ProgramWorkouts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProgramWorkout_DayNumber", "DayNumber >= 1");
+
+                            t.HasCheckConstraint("CK_ProgramWorkout_WeekNumber", "WeekNumber >= 1");
+                        });
                 });
 
             modelBuilder.Entity("TrainingService.Domain.Entities.TrainingProgram", b =>
@@ -125,9 +131,13 @@ namespace TrainingService.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("DurationWeeks")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Goal")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsDeleted")
@@ -141,14 +151,20 @@ namespace TrainingService.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.ToTable("TrainingProgram");
+                    b.ToTable("TrainingPrograms", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TrainingProgram_DaysPerWeek", "DaysPerWeek BETWEEN 1 AND 7");
+
+                            t.HasCheckConstraint("CK_TrainingProgram_DurationWeeks", "DurationWeeks >= 1");
+                        });
                 });
 
             modelBuilder.Entity("TrainingService.Domain.Entities.Workout", b =>
@@ -181,7 +197,7 @@ namespace TrainingService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Workout");
+                    b.ToTable("Workouts");
                 });
 
             modelBuilder.Entity("TrainingService.Domain.Entities.WorkoutExercise", b =>
@@ -229,7 +245,7 @@ namespace TrainingService.Migrations
 
                     b.HasIndex("WorkoutId");
 
-                    b.ToTable("WorkoutExercise");
+                    b.ToTable("WorkoutExercises");
                 });
 
             modelBuilder.Entity("TrainingService.Domain.Entities.ProgramWorkout", b =>
@@ -243,7 +259,7 @@ namespace TrainingService.Migrations
                     b.HasOne("TrainingService.Domain.Entities.Workout", "Workout")
                         .WithMany("ProgramWorkouts")
                         .HasForeignKey("WorkoutId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("TrainingProgram");
