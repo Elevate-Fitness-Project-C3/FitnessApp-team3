@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using TrainingService.Dtos.Shared;
-using TrainingService.Dtos.TrainingPrograms;
+using TrainingService.Dtos.WorkoutPrograms;
 
 namespace TrainingService.Features.ProgramWorkouts.AssignWorkoutToProgram {
 

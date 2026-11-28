@@ -1,5 +1,7 @@
 ﻿using TrainingService.Dtos.Exercises;
 using TrainingService.Dtos.TrainingPrograms;
+using TrainingService.Dtos.WorkoutPrograms;
+using TrainingService.ViewModels.ProgramWorkouts;
 
 namespace TrainingService.ViewModels.TrainingProgram;
 

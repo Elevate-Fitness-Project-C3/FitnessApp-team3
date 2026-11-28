@@ -1,4 +1,4 @@
-﻿namespace TrainingService.Dtos.TrainingPrograms {
+﻿namespace TrainingService.Dtos.WorkoutPrograms {
     public class AssignWorkoutToProgramDto {
 
         public Guid TrainingProgramId { get; set; }
