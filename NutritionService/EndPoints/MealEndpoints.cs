@@ -14,7 +14,8 @@ namespace NutritionService.EndPoints
         public static IEndpointRouteBuilder MapMealEndpoints(this IEndpointRouteBuilder app)
         {
             var group = app.MapGroup("/api/nutrition/meals")
-            .WithTags("Meals");
+            .WithTags("Meals")
+            .RequireAuthorization();
 
             group.MapGet("/", async (
                 string? search,
@@ -41,7 +42,10 @@ namespace NutritionService.EndPoints
                     : result.Error.ToHttpError();
             });
 
-            group.MapPost("/", async ([FromBody] CreateMealViewModel vm, IMediator mediator, CancellationToken ct) =>
+            var adminGroup = group.MapGroup("")
+                .RequireAuthorization(p=>p.RequireRole("Admin"));
+
+            adminGroup.MapPost("/", async ([FromBody] CreateMealViewModel vm, IMediator mediator, CancellationToken ct) =>
             {
                 var result = await mediator.Send(new CreateMealCommand(
                     vm.Name,
@@ -49,8 +53,8 @@ namespace NutritionService.EndPoints
                     vm.Calories,
                     vm.ProteinGrams), ct);
                 return result.IsSuccess ? Results.Created() : result.Error.ToHttpError();
-            }).RequireAuthorization(p=>p.RequireRole("Admin"));
-            group.MapPut("/{mealId:guid}", async (
+            });
+            adminGroup.MapPut("/{mealId:guid}", async (
                 Guid mealId,
                 [FromBody] UpdateMealViewModel vm,
                 IMediator mediator,
@@ -66,8 +70,8 @@ namespace NutritionService.EndPoints
                 return result.IsSuccess
                 ? Results.NoContent()
                 : result.Error.ToHttpError();
-            }).RequireAuthorization(p=>p.RequireRole("Admin"));
-            group.MapPatch("/{mealId:guid}/deactivate", async (
+            });
+            adminGroup.MapPatch("/{mealId:guid}/deactivate", async (
                     Guid mealId,
                     IMediator mediator,
                     CancellationToken ct) =>
@@ -77,7 +81,7 @@ namespace NutritionService.EndPoints
                 return result.IsSuccess
                     ? Results.NoContent()
                     : result.Error.ToHttpError();
-            }).RequireAuthorization(p=>p.RequireRole("Admin"));
+            });
             return app;
         }
     }

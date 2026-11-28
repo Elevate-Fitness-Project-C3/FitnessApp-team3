@@ -1,12 +1,14 @@
-﻿using FluentValidation;
+﻿using System.Reflection;
+using FitnessApp.Authentication;
+using FluentValidation;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using NutritionService.Comman.Behaviors;
 using NutritionService.Data;
 using NutritionService.Domain.Repositories;
-using NutritionService.Features.CalorieTarget.Handlers;
+using NutritionService.Features.CalorieTarget.Consumers;
 using NutritionService.Options;
-using NutritionService.Services.FitnessProfile;
-using System.Reflection;
+
 namespace NutritionService
 {
     public static class DependencyInjection
@@ -25,27 +27,51 @@ namespace NutritionService
             });
             service.AddValidatorsFromAssembly(assembly);
 
-            //================================================================
             service.Configure<CalorieTargetOptions>(config.GetSection(CalorieTargetOptions.SectionName));
-            service.AddHttpContextAccessor();
-            service.AddTransient<BearerTokenForwardingHandler>();
+            service.Configure<MealRecommendationOptions>(config.GetSection(MealRecommendationOptions.SectionName));
             service.AddScoped<IUnitOfWork, UnitOfWork>();
+            service.AddAccessTokenAuthentication(config);
+            service.AddMessaging(config);
 
-            service.AddHttpClient(
-             GetUserTdeeQueryHandler.ClientName,
-             client =>
-             {
-                 var baseUrl = config["Services:FitnessProfileBaseUrl"];
-                 if (string.IsNullOrWhiteSpace(
-                     baseUrl))
-                    {
-                     baseUrl = "http://localhost:5007/";
-                 }
+            return service;
+        }
 
-                 client.BaseAddress = new Uri(baseUrl);
-                 client.Timeout =
-                     TimeSpan.FromSeconds(5);
-             }).AddHttpMessageHandler<BearerTokenForwardingHandler>();
+        private static IServiceCollection AddMessaging(this IServiceCollection service, IConfiguration config)
+        {
+            service.AddMassTransit(x =>
+            {
+                x.AddConsumer<UserTdeeCalculatedConsumer>()
+                    .Endpoint(e => e.Name = "nutrition-user-tdee-calculated");
+
+                x.AddEntityFrameworkOutbox<NutritionDbContext>(o =>
+                {
+                    o.UseSqlServer();
+                });
+
+                x.AddConfigureEndpointsCallback((context, _, cfg) =>
+                {
+                    cfg.UseMessageRetry(r => r.Intervals(
+                        TimeSpan.FromSeconds(1),
+                        TimeSpan.FromSeconds(5),
+                        TimeSpan.FromSeconds(15)));
+
+                    cfg.UseEntityFrameworkOutbox<NutritionDbContext>(context);
+                });
+
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    cfg.Host(
+                        config["RabbitMq:Host"] ?? "rabbitmq",
+                        config["RabbitMq:VirtualHost"] ?? "/",
+                        h =>
+                        {
+                            h.Username(config["RabbitMq:Username"] ?? "guest");
+                            h.Password(config["RabbitMq:Password"] ?? "guest");
+                        });
+
+                    cfg.ConfigureEndpoints(context);
+                });
+            });
 
             return service;
         }
